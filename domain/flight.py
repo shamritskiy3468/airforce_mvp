@@ -7,3 +7,5 @@ from .enums import FlightState
 class Flight(AirObject):
     state: FlightState = FlightState.ON_GROUND
     route: Route | None = None  # для рейсовых самолётов
+    # индекс текущего waypoint
+    current_waypoint_idx: int = 0
