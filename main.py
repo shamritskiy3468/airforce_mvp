@@ -28,7 +28,7 @@ def main():
     navigation_policies = {}
 
     for obj in objects:
-        if obj.type.value == "passenger":
+        if obj.type.value == "passenger_plane":
             navigation_policies[obj.object_id] = RouteNavigationPolicy()
         else:
             navigation_policies[obj.object_id] = RandomNavigationPolicy()
