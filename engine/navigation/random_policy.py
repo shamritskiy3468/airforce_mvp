@@ -1,6 +1,7 @@
 import random
 from domain.enums import SpeedSource
 from engine.navigation.base import NavigationPolicy
+from engine.navigation.math import move_on_plane
 
 
 class RandomNavigationPolicy(NavigationPolicy):
@@ -17,7 +18,7 @@ class RandomNavigationPolicy(NavigationPolicy):
         if random.random() < 0.2:
             heading += random.uniform(-30, 30)
 
-        new_lat, new_lon = self._move(
+        new_lat, new_lon = move_on_plane(
             last.lat,
             last.lon,
             speed,
@@ -34,16 +35,3 @@ class RandomNavigationPolicy(NavigationPolicy):
             heading=heading % 360,
             timestamp=current_time,
         )
-
-    def _move(self, lat, lon, speed_kmh, heading_deg, dt_seconds):
-        import math
-
-        distance_km = speed_kmh * (dt_seconds / 3600)
-        heading_rad = math.radians(heading_deg)
-
-        delta_lat = distance_km * math.cos(heading_rad) / 111
-        delta_lon = distance_km * math.sin(heading_rad) / (
-            111 * math.cos(math.radians(lat))
-        )
-
-        return lat + delta_lat, lon + delta_lon
