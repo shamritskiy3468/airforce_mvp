@@ -1,5 +1,5 @@
 import random
-from typing import List
+from typing import List, Optional
 from domain.air_object import AirObject
 from domain.flight import Flight
 from domain.route import Route, Waypoint
@@ -9,8 +9,9 @@ class FlightFactory:
     """Generator for planned flights and random air objects"""
 
     @staticmethod
-    def create_passenger_flight(origin: Waypoint, destination: Waypoint) -> Flight:
-        route = Route(origin=origin, destination=destination)
+    def create_passenger_flight(origin: Waypoint, destination: Waypoint, route: Optional[Route] = None) -> Flight:
+        if route is None:
+            route = Route(origin=origin, destination=destination)
         flight = Flight(
             type=AirObjectType.PASSENGER_PLANE,
             state=FlightState.ON_GROUND,

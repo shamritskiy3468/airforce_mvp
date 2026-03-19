@@ -20,7 +20,7 @@ class AirObject:
     object_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     type: AirObjectType = AirObjectType.UNKNOWN
     positions: List[Position] = field(default_factory=list)
-    max_history: int = 1000
+    max_history: int = 300
 
     def update_position(self, lat: float, lon: float, altitude: float,
                         heading: Optional[float] = None,

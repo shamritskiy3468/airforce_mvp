@@ -1,2 +1,8 @@
 notes.txt
 __pycache__/
+input/
+output/
+test.py
+helpers/moving_test.py
+helpers/belarus_map.png
+.DS_Store
