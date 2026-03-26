@@ -18,15 +18,14 @@ from engine.sinks import JsonlSink # ConsoleSink, NullSink
 from engine.runtime import run_fast, run_realtime
 from helpers.csv2route import Csv2Route
 
-
 def main():
     # Конфиг симуляции (один источник правды).
     config = SimulationConfig(
-        seed=42,
+        seed=42, # 42 — это классическое значение для воспроизводимости, можно менять для разных сценариев.
         time=TimeConfig(
-            tick_seconds=1,
-            time_scale=5.0,
-            max_steps=2000,
+            tick_seconds=5, # Имитационные секунлы на тик. 20 секунд — это уже заметный шаг, можно уменьшать для более плавного движения, но будет больше событий и нагрузка.
+            time_scale=15.0, # Ускорение симуляции относительно реального времени. 1.0 = realtime, >1 ускорение, <1 замедление. Важно для режима realtime, в режиме fast не влияет.
+            max_steps=5000, # Шаги симуляции
         ),
         area=AreaConfig(
             # грубо "окрестности Минска"
@@ -36,19 +35,19 @@ def main():
             max_lon=30.0,
         ),
         noise=NoiseConfig(
-            enabled=False,
-            spawn_rate_per_tick=0.0,
+            enabled=True,
+            spawn_rate_per_tick=0.05,
             ttl_seconds_min=30,
             ttl_seconds_max=180,
-            travel_km_min=5.0,
+            travel_km_min=3.0,
             travel_km_max=10.0,
         ),
         fleet=FleetConfig(
-            planned_flights=0,
-            random_objects=0,
+            planned_flights=100,
+            random_objects=30,
         ),
         runtime=RuntimeConfig(
-            realtime=True,
+            realtime=False,
         ),
     )
 
@@ -61,18 +60,18 @@ def main():
     # Можно добавить один или несколько маршрутов из CSV.
     # Формат CSV: заголовки lat, lon, altitude
 
-    route_csv_files = [
-        "./input/dubai_minst_linear_route.csv", # настройки для линейного маршрута
-    ]
+    # route_csv_files = [
+    #     "./input/dubai_minst_linear_route.csv", # настройки для линейного маршрута
+    # ]
 
-    for csv_path in route_csv_files:
-        route = Csv2Route(csv_path).route
-        flight = FlightFactory.create_passenger_flight(
-            origin=route.origin,
-            destination=route.destination,
-            route=route,
-        )
-        objects.append(flight)
+    # for csv_path in route_csv_files:
+    #     route = Csv2Route(csv_path).route
+    #     flight = FlightFactory.create_passenger_flight(
+    #         origin=route.origin,
+    #         destination=route.destination,
+    #         route=route,
+    #     )
+    #     objects.append(flight)
 
     # Используем timezone-aware UTC, чтобы не ловить предупреждения и путаницу со временем.
     start_time = datetime.datetime.now(datetime.timezone.utc)
@@ -89,6 +88,7 @@ def main():
             )
         else:
             # Для “шумовых” объектов — произвольная стартовая точка (можно улучшать).
+            # Желательно сделать конфиг для выбора рандомных точек из заданной области
             obj.update_position(
                 lat=54.011422,
                 lon=28.128171,
@@ -108,7 +108,8 @@ def main():
 
     # Sink: сейчас выводим редко, чтобы не убивать производительность.
     # sink = ConsoleSink(every_n_events=50)
-    sink = JsonlSink(path="./output/events.json")
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    sink = JsonlSink(path=f"./output/events_{timestamp}.json")
     # sink = NullSink()  # включи, если хочешь просто нагрузку без вывода
 
     engine = SimulationEngine(
