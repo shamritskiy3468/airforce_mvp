@@ -4,6 +4,7 @@ from domain.flight import Flight
 from generator.flight_factory import FlightFactory
 from engine.config import (
     AreaConfig,
+    EventConfig,
     FleetConfig,
     NoiseConfig,
     SimulationConfig,
@@ -31,7 +32,7 @@ def main():
             max_lon=30.0,
         ),
         noise=NoiseConfig(
-            enabled=True,
+            enabled=False,
             spawn_rate_per_tick=0.05,
             ttl_seconds_min=30,
             ttl_seconds_max=180,
@@ -39,11 +40,24 @@ def main():
             travel_km_max=10.0,
         ),
         fleet=FleetConfig(
-            planned_flights=100,
-            random_objects=30,
+            planned_flights=1,
+            random_objects=0,
         ),
         runtime=RuntimeConfig(
             realtime=False,
+        ),
+        events=EventConfig(
+            emit_interval_seconds_by_type={
+                "passenger_plane": 3, # чаще спамить, чтобы было больше данных для отладки + быстро меняют позицию
+                "fighter": 3, # чаще спамить, чтобы было больше данных для отладки + быстро меняют позицию
+                "helicopter": 5, # просто на посмотреть как часто вообще будут
+                "drone": 1, # часто спамить, т.к. могут быть быстрыми и маневренными
+                "uav": 10,
+                "jammer": 10,
+                "bird": 5,
+                "cloud": 15,
+            },
+            emit_when_stationary=False,
         ),
     )
 
