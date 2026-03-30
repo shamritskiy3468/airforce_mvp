@@ -35,10 +35,10 @@ def main(args):
         # QGIS selector для Европы (по границам примерно) + чуть больше, чтобы было 
         # видно объекты, которые только входят/уходят из зоны
         area=AreaConfig(
-            min_lat=45.868,
-            max_lat=59.856,
-            min_lon=13.754,
-            max_lon=39.948,
+            min_lat=51.293,
+            max_lat=56.285,
+            min_lon=23.140,
+            max_lon=33.313,
         ),
         noise=NoiseConfig(
             enabled=False,
@@ -49,8 +49,8 @@ def main(args):
             travel_km_max=10.0,
         ),
         fleet=FleetConfig(
-            planned_flights=0,
-            random_objects=1,
+            planned_flights=10,
+            random_objects=3,
         ),
         runtime=RuntimeConfig(
             realtime=False,
@@ -106,7 +106,7 @@ def main(args):
         if obj.type.value == "passenger_plane":
             navigation_policies[obj.object_id] = RouteNavigationPolicy()
         else:
-            navigation_policies[obj.object_id] = RandomNavigationPolicy()
+            navigation_policies[obj.object_id] = RandomNavigationPolicy(area=config.area)
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     json_sink_filename = f"./output/events_{timestamp}.json"

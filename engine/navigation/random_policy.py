@@ -2,11 +2,15 @@ import random
 
 from domain.enums import SpeedSource
 from domain.kinematics import clamp, move_altitude_towards
+from engine.config import AreaConfig
 from engine.navigation.base import NavigationPolicy
-from engine.navigation.math import move_on_plane
+from engine.navigation.math import calculate_heading, move_on_plane
 
 
 class RandomNavigationPolicy(NavigationPolicy):
+    def __init__(self, area: AreaConfig | None = None):
+        self._area = area
+
     def move(self, obj, dt_seconds: int, current_time):
         if not obj.positions:
             return
@@ -30,6 +34,20 @@ class RandomNavigationPolicy(NavigationPolicy):
             heading,
             dt_seconds,
         )
+
+        if self._area is not None and not self._area.contains(new_lat, new_lon):
+            center_lat = (self._area.min_lat + self._area.max_lat) / 2
+            center_lon = (self._area.min_lon + self._area.max_lon) / 2
+            heading = calculate_heading(last.lat, last.lon, center_lat, center_lon)
+            new_lat, new_lon = move_on_plane(
+                last.lat,
+                last.lon,
+                speed,
+                heading,
+                dt_seconds,
+            )
+            new_lat = clamp(new_lat, self._area.min_lat, self._area.max_lat)
+            new_lon = clamp(new_lon, self._area.min_lon, self._area.max_lon)
 
         target_altitude = clamp(
             profile.cruise_altitude_m + random.uniform(-250.0, 250.0),

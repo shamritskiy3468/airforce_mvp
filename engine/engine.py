@@ -59,7 +59,7 @@ class SimulationEngine:
             # Для шумов всегда random-policy
             from engine.navigation.random_policy import RandomNavigationPolicy
 
-            self.navigation_policies[obj.object_id] = RandomNavigationPolicy()
+            self.navigation_policies[obj.object_id] = RandomNavigationPolicy(area=self.config.area)
 
         # 2) Двигаем объекты и создаём PositionEvent
         events: List[PositionEvent] = []
@@ -74,6 +74,9 @@ class SimulationEngine:
 
             last_after = obj.latest_position()
             if last_after is None:
+                continue
+
+            if not self.config.area.contains(last_after.lat, last_after.lon):
                 continue
 
             # Учёт "пройденной дистанции" для шумовых целей
