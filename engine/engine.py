@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import datetime
 import random
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from domain.air_object import AirObject
-from domain.enums import SpeedSource
 from engine.navigation.base import NavigationPolicy
 from engine.navigation.math import haversine_distance
 
@@ -17,11 +16,11 @@ from .spawner import NoiseSpawner
 
 class SimulationEngine:
     """
-    "Отполированный" слой поверх текущего SimulationLoop:
+    Центральный orchestration-слой симуляции:
       * конфиг,
       * шумовой spawner (spawn/despawn),
       * генерация PositionEvent и отправка в sink,
-      * одно место, где хранится current_time.
+      * единая точка хранения current_time.
     """
 
     def __init__(
@@ -117,4 +116,3 @@ class SimulationEngine:
         self.current_time += datetime.timedelta(seconds=dt)
 
         return len(events)
-

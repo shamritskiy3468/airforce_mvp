@@ -5,6 +5,7 @@ from .enums import FlightState
 
 @dataclass
 class Flight(AirObject):
+    callsign: str | None = None
     state: FlightState = FlightState.ON_GROUND
     route: Route | None = None  # для рейсовых самолётов
     # индекс текущего waypoint

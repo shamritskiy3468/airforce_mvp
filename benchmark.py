@@ -26,6 +26,7 @@ def main():
     objects = FlightFactory.generate_scenario(
         num_passenger=config.fleet.planned_flights,
         num_random=config.fleet.random_objects,
+        area=config.area,
     )
 
     start_time = datetime.datetime.now(datetime.timezone.utc)
@@ -52,4 +53,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
