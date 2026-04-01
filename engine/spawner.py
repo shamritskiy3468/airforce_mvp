@@ -6,76 +6,65 @@ from dataclasses import dataclass
 from typing import Dict, List
 
 from domain.air_object import AirObject
-from domain.enums import AirObjectType
-from domain.kinematics import sample_altitude_m, sample_speed_kmh
+from generator.flight_factory import FlightFactory
 
-from .config import AreaConfig, NoiseConfig
+from .config import AreaConfig, TransientConfig
 
 
 @dataclass
-class NoiseMeta:
-    """
-    Метаданные для "шумовой" цели, чтобы понимать, когда её удалить.
-    """
-
+class TransientMeta:
     expires_at: datetime.datetime
     remaining_km: float
 
 
-class NoiseSpawner:
+class TransientSpawner:
     """
-    Спавнит и удаляет шумовые объекты:
-      * появляются "из ниоткуда" в пределах области,
-      * живут TTL,
-      * либо исчезают после прохождения travel_km.
+    Генерирует и удаляет краткоживущие реальные явления в truth-layer:
+      * стаи птиц,
+      * погодные ячейки,
+      * аэростаты и похожие transient-объекты.
     """
 
-    def __init__(self, area: AreaConfig, noise: NoiseConfig):
+    def __init__(self, area: AreaConfig, transient: TransientConfig):
         self._area = area
-        self._cfg = noise
-        self._meta_by_id: Dict[str, NoiseMeta] = {}
+        self._cfg = transient
+        self._meta_by_id: Dict[str, TransientMeta] = {}
+
+    def initial_objects(self, current_time: datetime.datetime) -> List[AirObject]:
+        objects: List[AirObject] = []
+        for _ in range(self._cfg.initial_objects):
+            objects.extend(self._spawn_one(current_time))
+        return objects
 
     def maybe_spawn(self, current_time: datetime.datetime) -> List[AirObject]:
-        spawned: List[AirObject] = []
-
         if not self._cfg.enabled:
-            return spawned
-
+            return []
         if random.random() >= self._cfg.spawn_rate_per_tick:
-            return spawned
+            return []
+        return self._spawn_one(current_time)
 
-        obj_type = random.choice(
-            [
-                AirObjectType.BIRD,
-                AirObjectType.CLOUD,
-                AirObjectType.DRONE,
-                AirObjectType.UAV,
-                AirObjectType.HELICOPTER,
-            ]
+    def _spawn_one(self, current_time: datetime.datetime) -> List[AirObject]:
+        obj = FlightFactory.create_transient_object()
+        lat, lon, altitude, speed, heading = FlightFactory.sample_object_position(
+            area=self._area,
+            platform_class=obj.platform_class,
         )
-        obj = AirObject(type=obj_type)
-
-        lat = random.uniform(self._area.min_lat, self._area.max_lat)
-        lon = random.uniform(self._area.min_lon, self._area.max_lon)
-
         obj.update_position(
             lat=lat,
             lon=lon,
-            altitude=sample_altitude_m(obj_type),
-            speed=sample_speed_kmh(obj_type),
-            heading=random.uniform(0, 360),
+            altitude=altitude,
+            speed=speed,
+            heading=heading,
             timestamp=current_time,
         )
 
         ttl = random.randint(self._cfg.ttl_seconds_min, self._cfg.ttl_seconds_max)
         travel_km = random.uniform(self._cfg.travel_km_min, self._cfg.travel_km_max)
-        self._meta_by_id[obj.object_id] = NoiseMeta(
+        self._meta_by_id[obj.object_id] = TransientMeta(
             expires_at=current_time + datetime.timedelta(seconds=ttl),
             remaining_km=travel_km,
         )
-
-        spawned.append(obj)
-        return spawned
+        return [obj]
 
     def consume_distance(self, obj: AirObject, distance_km: float) -> None:
         meta = self._meta_by_id.get(obj.object_id)
@@ -83,27 +72,22 @@ class NoiseSpawner:
             return
         meta.remaining_km -= max(0.0, distance_km)
 
-    def is_noise(self, obj: AirObject) -> bool:
+    def is_transient(self, obj: AirObject) -> bool:
         return obj.object_id in self._meta_by_id
 
     def should_despawn(self, obj: AirObject, current_time: datetime.datetime, area: AreaConfig) -> bool:
         meta = self._meta_by_id.get(obj.object_id)
         if meta is None:
             return False
-
         if current_time >= meta.expires_at:
             return True
-
         if meta.remaining_km <= 0:
             return True
-
         last = obj.latest_position()
         if last is None:
             return True
-
         if not area.contains(last.lat, last.lon):
             return True
-
         return False
 
     def despawn(self, obj: AirObject) -> None:

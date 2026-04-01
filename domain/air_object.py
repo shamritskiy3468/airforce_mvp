@@ -3,7 +3,14 @@ import uuid
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from .enums import AirObjectType, SpeedSource
+from .enums import (
+    CooperationStatus,
+    MissionProfile,
+    PlatformClass,
+    ScenarioBucket,
+    SpeedSource,
+    TruthAffiliation,
+)
 from .kinematics import KinematicsProfile, profile_for
 
 @dataclass
@@ -19,14 +26,18 @@ class Position:
 @dataclass
 class AirObject:
     object_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    type: AirObjectType = AirObjectType.UNKNOWN
+    scenario_bucket: ScenarioBucket = ScenarioBucket.UNSCHEDULED_TRAFFIC
+    platform_class: PlatformClass = PlatformClass.UNKNOWN
+    mission_profile: MissionProfile = MissionProfile.TRANSIT
+    truth_affiliation: TruthAffiliation = TruthAffiliation.NEUTRAL
+    cooperation_status: CooperationStatus = CooperationStatus.SILENT
     kinematics: Optional[KinematicsProfile] = None
     positions: List[Position] = field(default_factory=list)
     max_history: int = 300
 
     def __post_init__(self):
         if self.kinematics is None:
-            self.kinematics = profile_for(self.type)
+            self.kinematics = profile_for(self.platform_class)
 
     def update_position(self, lat: float, lon: float, altitude: float,
                         heading: Optional[float] = None,

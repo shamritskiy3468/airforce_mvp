@@ -2,6 +2,7 @@ import json
 import csv
 from pathlib import Path
 from typing import Union, Dict, List
+from engine.sinks import JsonlSink, NullSink, ConsoleSink
 
 
 class Helpers:
@@ -61,3 +62,19 @@ class Helpers:
             for item in waypoints.iterdir():
                 if item.is_file():
                     item.unlink()
+    
+    @staticmethod
+    def create_sink(sink_type: str):
+        sink_type = sink_type.lower()
+
+        if sink_type == "json":
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            json_sink_filename = f"./output/events_{timestamp}.json"
+            return JsonlSink(path=json_sink_filename)
+        elif sink_type == "console":
+            return ConsoleSink()
+        elif sink_type == "null":
+            return NullSink()
+        else:
+            raise ValueError(f"Unknown sink type: {sink_type!r}. "
+                            "Allowed: json, console, null")
