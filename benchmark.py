@@ -26,6 +26,7 @@ def main():
     objects = FlightFactory.generate_scenario(
         num_passenger=config.fleet.planned_flights,
         num_random=config.fleet.random_objects,
+        area=config.area,
     )
 
     start_time = datetime.datetime.now(datetime.timezone.utc)
@@ -33,7 +34,7 @@ def main():
         # Стартовая позиция в одной точке (для чистого CPU бенча это ок)
         obj.update_position(lat=54.0, lon=28.0, altitude=0.0, timestamp=start_time)
 
-    navigation_policies = {obj.object_id: RandomNavigationPolicy() for obj in objects}
+    navigation_policies = {obj.object_id: RandomNavigationPolicy(area=config.area) for obj in objects}
     engine = SimulationEngine(
         config=config,
         objects=objects,
@@ -52,4 +53,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

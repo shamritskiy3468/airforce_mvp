@@ -1,5 +1,5 @@
 import csv
-from domain.route import Route, Waypoint    
+from domain.route import Route, Waypoint
 
 class Csv2Route:
     def __init__(self, filename: str):

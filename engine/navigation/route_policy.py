@@ -1,11 +1,13 @@
 from domain.flight import Flight
 from domain.enums import SpeedSource, FlightState
+from domain.kinematics import clamp, move_altitude_towards
 from engine.navigation.base import NavigationPolicy
 from engine.navigation.math import (
     haversine_distance,
     calculate_heading,
     move_on_plane,
 )
+
 
 class RouteNavigationPolicy(NavigationPolicy):
     def move(self, obj: Flight, dt_seconds: int, current_time):
@@ -16,25 +18,18 @@ class RouteNavigationPolicy(NavigationPolicy):
         waypoints = [route.origin] + route.waypoints + [route.destination]
 
         if obj.current_waypoint_idx >= len(waypoints):
-            # Если дошли до конца маршрута — считаем, что самолёт приземлился.
-            obj.state = FlightState.ON_GROUND
+            obj.state = FlightState.FINISHED
             return
 
-        # Если начали движение по маршруту — самолёт уже не "на земле".
-        # Детальную модель TAKEOFF/CLIMB/DESCENT можно добавить позже.
-        if obj.state == FlightState.ON_GROUND and obj.current_waypoint_idx == 0:
-            obj.state = FlightState.CRUISE
-
         last_pos = obj.positions[-1]
+        profile = obj.kinematics
 
-        speed = last_pos.speed or 800  # почему-то 800 км/ч для всех самолётов, можно улучшить
+        speed = self._target_speed(obj=obj, altitude=last_pos.altitude)
+        speed = clamp(speed, profile.min_speed_kmh, profile.max_speed_kmh)
         remaining_km = speed * (dt_seconds / 3600)
 
         cur_lat, cur_lon, cur_alt = last_pos.lat, last_pos.lon, last_pos.altitude
 
-        # Важно: CSV маршруты могут содержать очень плотные точки (тысячи).
-        # Поэтому за один тик мы можем "проскочить" сразу несколько waypoint'ов,
-        # пока хватает remaining_km.
         while remaining_km > 0 and obj.current_waypoint_idx < len(waypoints):
             target = waypoints[obj.current_waypoint_idx]
             dist_to_target = haversine_distance(
@@ -44,29 +39,23 @@ class RouteNavigationPolicy(NavigationPolicy):
                 target.lon,
             )
 
-            # Если можем долететь до текущего waypoint в рамках remaining_km —
-            # "съедаем" waypoint и идём дальше.
             if dist_to_target <= remaining_km:
                 cur_lat, cur_lon = target.lat, target.lon
+                cur_alt = target.altitude
                 remaining_km -= dist_to_target
                 obj.current_waypoint_idx += 1
 
                 if obj.current_waypoint_idx >= len(waypoints):
-                    # Долетели до destination в этом же тике.
-                    obj.state = FlightState.ON_GROUND
                     cur_alt = 0.0
                     break
                 continue
 
-            # Иначе летим частично в сторону target и заканчиваем тик.
             heading = calculate_heading(
                 cur_lat,
                 cur_lon,
                 target.lat,
                 target.lon,
             )
-            # Переводим remaining_km обратно в секунды того же тика:
-            # distance_km = speed_kmh * dt/3600  -> dt = distance_km * 3600 / speed
             dt_partial_seconds = int(max(1.0, remaining_km * 3600 / speed))
             cur_lat, cur_lon = move_on_plane(
                 cur_lat,
@@ -75,7 +64,18 @@ class RouteNavigationPolicy(NavigationPolicy):
                 heading,
                 dt_partial_seconds,
             )
+            cur_alt = move_altitude_towards(
+                current_altitude_m=cur_alt,
+                target_altitude_m=target.altitude,
+                dt_seconds=dt_partial_seconds,
+                climb_rate_mps=profile.climb_rate_mps,
+                descent_rate_mps=profile.descent_rate_mps,
+            )
             remaining_km = 0
+
+        obj.state = self._derive_state(obj=obj, altitude=cur_alt, total_waypoints=len(waypoints))
+        if obj.state == FlightState.FINISHED:
+            speed = 0.0
 
         obj.update_position(
             lat=cur_lat,
@@ -92,4 +92,27 @@ class RouteNavigationPolicy(NavigationPolicy):
             timestamp=current_time,
         )
 
-    # Примечание: движение по плоскости вынесено в engine.navigation.math.move_on_plane
+    def _target_speed(self, obj: Flight, altitude: float) -> float:
+        profile = obj.kinematics
+        total_points = len([obj.route.origin] + obj.route.waypoints + [obj.route.destination])
+
+        if obj.current_waypoint_idx <= 1 and altitude < 300.0:
+            return 260.0
+        if obj.current_waypoint_idx >= total_points - 1 and altitude < 800.0:
+            return 240.0
+        if altitude < profile.cruise_altitude_m * 0.7:
+            return min(profile.cruise_speed_kmh * 0.75, profile.max_speed_kmh)
+        return profile.cruise_speed_kmh
+
+    def _derive_state(self, obj: Flight, altitude: float, total_waypoints: int) -> FlightState:
+        if obj.current_waypoint_idx >= total_waypoints:
+            return FlightState.FINISHED
+        if obj.current_waypoint_idx <= 1 and altitude <= 300.0:
+            return FlightState.TAKEOFF
+        if obj.current_waypoint_idx >= total_waypoints - 1 and altitude <= 500.0:
+            return FlightState.LANDING
+        if obj.current_waypoint_idx >= total_waypoints - 2:
+            return FlightState.DESCENT
+        if altitude < obj.kinematics.cruise_altitude_m * 0.85:
+            return FlightState.CLIMB
+        return FlightState.CRUISE

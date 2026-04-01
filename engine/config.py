@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 
@@ -52,6 +52,12 @@ class RuntimeConfig:
 
     realtime: bool = False
 
+
+@dataclass(frozen=True)
+class EventConfig:
+    emit_interval_seconds_by_type: dict[str, int] = field(default_factory=dict)
+    emit_when_stationary: bool = False # нужно ли спамить стоячие объекты (например, вертолеты на земле) - скорее всего нет :)
+
 # Конфиг для симуляции целиком
 @dataclass(frozen=True)
 class SimulationConfig:
@@ -61,4 +67,4 @@ class SimulationConfig:
     noise: NoiseConfig
     fleet: FleetConfig
     runtime: RuntimeConfig
-
+    events: EventConfig = field(default_factory=EventConfig)

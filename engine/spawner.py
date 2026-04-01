@@ -3,10 +3,11 @@ from __future__ import annotations
 import datetime
 import random
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, List
 
 from domain.air_object import AirObject
 from domain.enums import AirObjectType
+from domain.kinematics import sample_altitude_m, sample_speed_kmh
 
 from .config import AreaConfig, NoiseConfig
 
@@ -40,7 +41,6 @@ class NoiseSpawner:
         if not self._cfg.enabled:
             return spawned
 
-        # Простейшая модель: с вероятностью spawn_rate_per_tick создаём 1 шумовую цель.
         if random.random() >= self._cfg.spawn_rate_per_tick:
             return spawned
 
@@ -58,17 +58,14 @@ class NoiseSpawner:
         lat = random.uniform(self._area.min_lat, self._area.max_lat)
         lon = random.uniform(self._area.min_lon, self._area.max_lon)
 
-        # altitude: очень грубо по типу
-        if obj_type in (AirObjectType.CLOUD,):
-            altitude = random.uniform(2000, 9000)
-        elif obj_type in (AirObjectType.BIRD,):
-            altitude = random.uniform(50, 300)
-        elif obj_type in (AirObjectType.DRONE, AirObjectType.UAV):
-            altitude = random.uniform(100, 2000)
-        else:
-            altitude = random.uniform(300, 5000)
-
-        obj.update_position(lat=lat, lon=lon, altitude=float(altitude), timestamp=current_time)
+        obj.update_position(
+            lat=lat,
+            lon=lon,
+            altitude=sample_altitude_m(obj_type),
+            speed=sample_speed_kmh(obj_type),
+            heading=random.uniform(0, 360),
+            timestamp=current_time,
+        )
 
         ttl = random.randint(self._cfg.ttl_seconds_min, self._cfg.ttl_seconds_max)
         travel_km = random.uniform(self._cfg.travel_km_min, self._cfg.travel_km_max)
@@ -111,4 +108,3 @@ class NoiseSpawner:
 
     def despawn(self, obj: AirObject) -> None:
         self._meta_by_id.pop(obj.object_id, None)
-
