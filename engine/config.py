@@ -18,14 +18,14 @@ class AreaConfig:
 
 
 @dataclass(frozen=True)
-class NoiseConfig:
-    # Config класс для "Шумов" 
-    enabled: bool = False # включен ли генератор шумов чтобы явно не ковырять коэфициенты
-    spawn_rate_per_tick: float = 0.2 # сколько шумовых объектов спавнить за тик (в среднем).
-    ttl_seconds_min: int = 60 # минимальное время жизни объекта
-    ttl_seconds_max: int = 300 # максимальное время жизни объекта
-    travel_km_min: float = 5.0 # минимальное расстояние, которое ШУМ объект должен пролететь
-    travel_km_max: float = 70.0 # максимальное расстояние, которое ШУМ объект может пролететь
+class TransientConfig:
+    enabled: bool = False
+    initial_objects: int = 0
+    spawn_rate_per_tick: float = 0.0
+    ttl_seconds_min: int = 60
+    ttl_seconds_max: int = 300
+    travel_km_min: float = 5.0
+    travel_km_max: float = 70.0
 
 
 @dataclass(frozen=True)
@@ -37,8 +37,8 @@ class TimeConfig:
 
 @dataclass(frozen=True)
 class FleetConfig:
-    planned_flights: int = 0
-    random_objects: int = 0
+    scheduled_traffic: int = 0
+    unscheduled_traffic: int = 0
 
 
 @dataclass(frozen=True)
@@ -64,7 +64,7 @@ class SimulationConfig:
     seed: Optional[int]
     time: TimeConfig
     area: AreaConfig
-    noise: NoiseConfig
+    transient: TransientConfig
     fleet: FleetConfig
     runtime: RuntimeConfig
     events: EventConfig = field(default_factory=EventConfig)

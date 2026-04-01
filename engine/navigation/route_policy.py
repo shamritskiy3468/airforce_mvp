@@ -95,11 +95,13 @@ class RouteNavigationPolicy(NavigationPolicy):
     def _target_speed(self, obj: Flight, altitude: float) -> float:
         profile = obj.kinematics
         total_points = len([obj.route.origin] + obj.route.waypoints + [obj.route.destination])
+        low_speed = max(profile.min_speed_kmh, profile.cruise_speed_kmh * 0.55)
+        approach_speed = max(profile.min_speed_kmh, profile.cruise_speed_kmh * 0.45)
 
         if obj.current_waypoint_idx <= 1 and altitude < 300.0:
-            return 260.0
+            return low_speed
         if obj.current_waypoint_idx >= total_points - 1 and altitude < 800.0:
-            return 240.0
+            return approach_speed
         if altitude < profile.cruise_altitude_m * 0.7:
             return min(profile.cruise_speed_kmh * 0.75, profile.max_speed_kmh)
         return profile.cruise_speed_kmh

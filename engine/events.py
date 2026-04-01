@@ -4,7 +4,14 @@ import datetime
 from dataclasses import dataclass
 from typing import Optional
 
-from domain.enums import AirObjectType, SpeedSource
+from domain.enums import (
+    CooperationStatus,
+    MissionProfile,
+    PlatformClass,
+    ScenarioBucket,
+    SpeedSource,
+    TruthAffiliation,
+)
 
 
 @dataclass(frozen=True)
@@ -17,7 +24,11 @@ class PositionEvent:
     """
 
     object_id: str
-    object_type: AirObjectType
+    scenario_bucket: ScenarioBucket
+    platform_class: PlatformClass
+    mission_profile: MissionProfile
+    truth_affiliation: TruthAffiliation
+    cooperation_status: CooperationStatus
 
     lat: float
     lon: float
@@ -28,4 +39,3 @@ class PositionEvent:
 
     event_time: datetime.datetime
     ingest_time: datetime.datetime
-

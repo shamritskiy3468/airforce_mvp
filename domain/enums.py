@@ -1,15 +1,44 @@
 from enum import Enum
 
-class AirObjectType(Enum):
-    PASSENGER_PLANE = "passenger_plane"
-    HELICOPTER = "helicopter"
-    FIGHTER = "fighter"
-    DRONE = "drone"
-    UAV = "uav"
-    JAMMER = "jammer"
-    BIRD = "bird"
-    CLOUD = "cloud"
+
+class ScenarioBucket(Enum):
+    SCHEDULED_TRAFFIC = "scheduled_traffic"
+    UNSCHEDULED_TRAFFIC = "unscheduled_traffic"
+    TRANSIENT_PHENOMENA = "transient_phenomena"
+
+
+class PlatformClass(Enum):
+    FIXED_WING_AIRCRAFT = "fixed_wing_aircraft"
+    ROTARY_WING_AIRCRAFT = "rotary_wing_aircraft"
+    MULTIROTOR_UAV = "multirotor_uav"
+    FIXED_WING_UAV = "fixed_wing_uav"
+    BALLOON = "balloon"
+    BIRD_FLOCK = "bird_flock"
+    WEATHER_CELL = "weather_cell"
     UNKNOWN = "unknown"
+
+
+class MissionProfile(Enum):
+    TRANSIT = "transit"
+    PATROL = "patrol"
+    LOITER = "loiter"
+    TRAINING = "training"
+    RECON = "recon"
+    BORDER_PENETRATION = "border_penetration"
+    WEATHER_DRIFT = "weather_drift"
+
+
+class TruthAffiliation(Enum):
+    CIVILIAN = "civilian"
+    FRIENDLY = "friendly"
+    NEUTRAL = "neutral"
+    ADVERSARY = "adversary"
+
+
+class CooperationStatus(Enum):
+    COOPERATIVE = "cooperative"
+    NON_COOPERATIVE = "non_cooperative"
+    SILENT = "silent"
 
 class FlightState(Enum):
     ON_GROUND = "on_ground"

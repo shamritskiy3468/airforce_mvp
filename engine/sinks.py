@@ -30,7 +30,7 @@ class ConsoleSink(EventSink):
             if self._counter % self._n != 0:
                 continue
             print(
-                f"{e.event_time.isoformat()} | {e.object_type.value:<14} | "
+                f"{e.event_time.isoformat()} | {e.platform_class.value:<20} | "
                 f"lat={e.lat:.4f}, lon={e.lon:.4f}, alt={e.altitude:>5.0f}"
             )
 
@@ -49,9 +49,12 @@ class JsonlSink(EventSink):
             for e in events:
                 d = asdict(e)
                 # Enum → value для сериализации
-                d["object_type"] = e.object_type.value
+                d["scenario_bucket"] = e.scenario_bucket.value
+                d["platform_class"] = e.platform_class.value
+                d["mission_profile"] = e.mission_profile.value
+                d["truth_affiliation"] = e.truth_affiliation.value
+                d["cooperation_status"] = e.cooperation_status.value
                 d["speed_source"] = e.speed_source.value if e.speed_source else None
                 d["event_time"] = e.event_time.isoformat()
                 d["ingest_time"] = e.ingest_time.isoformat()
                 f.write(json.dumps(d, ensure_ascii=False) + "\n")
-
