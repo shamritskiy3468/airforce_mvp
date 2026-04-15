@@ -1,5 +1,6 @@
 import json
 import csv
+import datetime
 from pathlib import Path
 from typing import Union, Dict, List
 from engine.sinks import JsonlSink, NullSink, ConsoleSink
@@ -33,6 +34,10 @@ class Helpers:
                 object_id = obj.get("object_id")
                 lat = obj.get("lat")
                 lon = obj.get("lon")
+                event_type = obj.get("event_type")
+
+                if event_type == "despawned":
+                    continue
 
                 if object_id and lat is not None and lon is not None:
                     grouped.setdefault(object_id, []).append((lat, lon))

@@ -6,23 +6,26 @@ from typing import Optional
 
 from domain.enums import (
     CooperationStatus,
+    DespawnReason,
     MissionProfile,
     PlatformClass,
     ScenarioBucket,
     SpeedSource,
+    TruthEventType,
     TruthAffiliation,
 )
 
 
 @dataclass(frozen=True)
-class PositionEvent:
+class TruthEvent:
     """
-    Событие обновления позиции (то, что потом можно стримить в Kafka/CH).
+    Каноническое truth-событие мира.
 
     event_time: симуляционное время (мир симуляции)
     ingest_time: реальное время (когда событие было создано/отправлено)
     """
 
+    event_type: TruthEventType
     object_id: str
     scenario_bucket: ScenarioBucket
     platform_class: PlatformClass
@@ -39,3 +42,7 @@ class PositionEvent:
 
     event_time: datetime.datetime
     ingest_time: datetime.datetime
+    despawn_reason: Optional[DespawnReason] = None
+
+
+PositionEvent = TruthEvent

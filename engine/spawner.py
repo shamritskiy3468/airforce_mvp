@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Dict, List
 
 from domain.air_object import AirObject
+from domain.enums import DespawnReason
 from generator.flight_factory import FlightFactory
 
 from .config import AreaConfig, TransientConfig
@@ -76,19 +77,27 @@ class TransientSpawner:
         return obj.object_id in self._meta_by_id
 
     def should_despawn(self, obj: AirObject, current_time: datetime.datetime, area: AreaConfig) -> bool:
+        return self.despawn_reason(obj, current_time=current_time, area=area) is not None
+
+    def despawn_reason(
+        self,
+        obj: AirObject,
+        current_time: datetime.datetime,
+        area: AreaConfig,
+    ) -> DespawnReason | None:
         meta = self._meta_by_id.get(obj.object_id)
         if meta is None:
-            return False
+            return None
         if current_time >= meta.expires_at:
-            return True
+            return DespawnReason.TRANSIENT_EXPIRED
         if meta.remaining_km <= 0:
-            return True
+            return DespawnReason.TRANSIENT_DISTANCE_EXHAUSTED
         last = obj.latest_position()
         if last is None:
-            return True
+            return DespawnReason.TRANSIENT_EXPIRED
         if not area.contains(last.lat, last.lon):
-            return True
-        return False
+            return DespawnReason.TRANSIENT_LEFT_AREA
+        return None
 
     def despawn(self, obj: AirObject) -> None:
         self._meta_by_id.pop(obj.object_id, None)

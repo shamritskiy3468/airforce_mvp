@@ -52,3 +52,17 @@ class FlightState(Enum):
 class SpeedSource(Enum):
     RADAR = "radar"           # скорость пришла от радара (мы ей доверяем)
     CALCULATED = "calculated" # скорость рассчитана по координатам
+
+
+class TruthEventType(Enum):
+    SPAWNED = "spawned"
+    POSITION_UPDATED = "position_updated"
+    DESPAWNED = "despawned"
+
+
+class DespawnReason(Enum):
+    TRANSIENT_EXPIRED = "transient_expired"
+    TRANSIENT_DISTANCE_EXHAUSTED = "transient_distance_exhausted"
+    TRANSIENT_LEFT_AREA = "transient_left_area"
+    ROUTE_COMPLETED = "route_completed"
+    PLAYBACK_COMPLETED = "playback_completed"

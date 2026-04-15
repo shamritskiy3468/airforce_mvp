@@ -2,6 +2,7 @@ import datetime
 import argparse
 
 from domain.flight import Flight
+from domain.playback_object import PlaybackObject
 from generator.flight_factory import FlightFactory
 from engine.config import (
     AreaConfig,
@@ -14,7 +15,9 @@ from engine.config import (
 )
 # тока для дебага
 from helpers.helpers import Helpers
+from helpers.scenario_loader import ScenarioLoader
 from engine.engine import SimulationEngine
+from engine.navigation.playback_policy import PlaybackNavigationPolicy
 from engine.navigation.route_policy import RouteNavigationPolicy
 from engine.navigation.random_policy import RandomNavigationPolicy
 from engine.sinks import JsonlSink
@@ -78,8 +81,19 @@ def main(args):
     )
 
     start_time = datetime.datetime.now(datetime.timezone.utc)
+    if args.scenario:
+        objects.extend(
+            ScenarioLoader.load_objects(
+                paths=args.scenario,
+                start_time=start_time,
+            )
+        )
 
     for obj in objects:
+        if obj.latest_position() is not None:
+            continue
+        if isinstance(obj, PlaybackObject):
+            continue
         if isinstance(obj, Flight) and obj.route is not None:
             obj.update_position(
                 lat=obj.route.origin.lat,
@@ -104,16 +118,21 @@ def main(args):
     navigation_policies = {}
 
     for obj in objects:
-        if isinstance(obj, Flight) and obj.route is not None:
+        if isinstance(obj, PlaybackObject) and obj.track is not None:
+            navigation_policies[obj.object_id] = PlaybackNavigationPolicy()
+        elif isinstance(obj, Flight) and obj.route is not None:
             navigation_policies[obj.object_id] = RouteNavigationPolicy()
         else:
             navigation_policies[obj.object_id] = RandomNavigationPolicy(area=config.area)
+
+    sink = Helpers.create_sink(args.sink)
+    json_sink_filename = sink._path if isinstance(sink, JsonlSink) else None
 
     engine = SimulationEngine(
         config=config,
         objects=objects,
         navigation_policies=navigation_policies,
-        sink=Helpers.create_sink(args.sink),
+        sink=sink,
         start_time=start_time,
     )
 
@@ -128,7 +147,7 @@ def main(args):
         f"active_objects={len(engine.objects)}"
     )
 
-    if args.store_dots:
+    if args.store_dots and json_sink_filename is not None:
         Helpers.export_dots(input_path=json_sink_filename, output_dir="output/waypoints/")
 
 if __name__ == "__main__":
@@ -137,6 +156,12 @@ if __name__ == "__main__":
                         required=True,
                         choices=["json", "console", "null"],
                         help="Output sink type")
+    parser.add_argument(
+        "--scenario",
+        action="append",
+        default=[],
+        help="Path to a manual scenario JSON file. Can be passed multiple times.",
+    )
     parser.add_argument("--store-dots", 
                         action="store_true",
                         help="(DEBUG only) Generate CSV file in output/waypoints/ for loading in QGIS")
