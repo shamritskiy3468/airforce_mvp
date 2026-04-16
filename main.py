@@ -1,5 +1,6 @@
 import datetime
 import argparse
+from pathlib import Path
 
 from domain.flight import Flight
 from domain.playback_object import PlaybackObject
@@ -31,9 +32,9 @@ def main(args):
     config = SimulationConfig(
         seed=42,
         time=TimeConfig(
-            tick_seconds=1, # 1.0 = realtime (1 sec real = 1 sec sim), >1 ускорение, <1 замедление
+            tick_seconds=5, # 1.0 = realtime (1 sec real = 1 sec sim), >1 ускорение, <1 замедление
             time_scale=1.0, # ускорение симуляции (только для realtime режима)
-            max_steps=5000,
+            max_steps=1000, # шаги симуляции, после которых она завершится (для realtime может быть прервано вручную)
         ),
         # QGIS selector для Европы (по границам примерно) + чуть больше, чтобы было 
         # видно объекты, которые только входят/уходят из зоны
@@ -53,11 +54,11 @@ def main(args):
             travel_km_max=10.0,
         ),
         fleet=FleetConfig(
-            scheduled_traffic=5,
-            unscheduled_traffic=2,
+            scheduled_traffic=10,
+            unscheduled_traffic=10,
         ),
         runtime=RuntimeConfig(
-            realtime=True,
+            realtime=False,
         ),
         events=EventConfig(
             emit_interval_seconds_by_type={
@@ -65,7 +66,7 @@ def main(args):
                 "rotary_wing_aircraft": 5,
                 "multirotor_uav": 5,
                 "fixed_wing_uav": 10,
-                "balloon": 20,
+                "balloon": 5,
                 "bird_flock": 5,
                 "weather_cell": 15,
             },
@@ -126,6 +127,9 @@ def main(args):
             navigation_policies[obj.object_id] = RandomNavigationPolicy(area=config.area)
 
     sink = Helpers.create_sink(args.sink)
+    if args.store_dots and not isinstance(sink, JsonlSink):
+        raise ValueError("--store-dots requires --sink json")
+
     json_sink_filename = sink._path if isinstance(sink, JsonlSink) else None
 
     engine = SimulationEngine(
@@ -136,19 +140,32 @@ def main(args):
         start_time=start_time,
     )
 
-    if config.runtime.realtime:
-        stats = run_realtime(engine, steps=config.time.max_steps, time_scale=config.time.time_scale)
-    else:
-        stats = run_fast(engine, steps=config.time.max_steps)
+    stats = None
+    interrupted = False
+    try:
+        if config.runtime.realtime:
+            stats = run_realtime(engine, steps=config.time.max_steps, time_scale=config.time.time_scale)
+        else:
+            stats = run_fast(engine, steps=config.time.max_steps)
+    except KeyboardInterrupt:
+        interrupted = True
+        print("\ninterrupted | exporting partial waypoints from generated events")
+    finally:
+        if (
+            args.store_dots
+            and json_sink_filename is not None
+            and Path(json_sink_filename).exists()
+        ):
+            Helpers.export_dots(input_path=json_sink_filename, output_dir="output/waypoints/", limit=50)
 
-    print(
-        f"done | steps={stats.steps} | events={stats.events} | "
-        f"elapsed={stats.elapsed_real_seconds:.2f}s | eps={stats.events_per_second:.0f} | "
-        f"active_objects={len(engine.objects)}"
-    )
-
-    if args.store_dots and json_sink_filename is not None:
-        Helpers.export_dots(input_path=json_sink_filename, output_dir="output/waypoints/")
+    if stats is not None:
+        print(
+            f"done | steps={stats.steps} | events={stats.events} | "
+            f"elapsed={stats.elapsed_real_seconds:.2f}s | eps={stats.events_per_second:.0f} | "
+            f"active_objects={len(engine.objects)}"
+        )
+    elif interrupted:
+        print(f"partial_run | active_objects={len(engine.objects)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

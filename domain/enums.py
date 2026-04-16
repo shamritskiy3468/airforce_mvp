@@ -40,6 +40,15 @@ class CooperationStatus(Enum):
     NON_COOPERATIVE = "non_cooperative"
     SILENT = "silent"
 
+
+class FlightCategory(Enum):
+    UNKNOWN = "unknown"
+    PASSENGER = "passenger"
+    TRAINING = "training"
+    GENERAL_AVIATION = "general_aviation"
+    UTILITY = "utility"
+
+
 class FlightState(Enum):
     ON_GROUND = "on_ground"
     TAKEOFF = "takeoff"

@@ -8,7 +8,7 @@ from typing import List
 
 from engine.sensors.radar_observation import RadarObservation
 from domain.air_object import AirObject
-from engine.navigation.math import haversine_distance_km
+from engine.navigation.math import haversine_distance
 
 # Предположительно RadarObeservation - главный ивент который будет стримиться. может быть расширен в будущем, например, добавлением типа объекта, скорости и т.д.
 # Как минимум, он должен определять по скорости и высоте тип объекта (самолет, вертолет, дрон, птица и т.п.). 
@@ -60,7 +60,7 @@ class RadarStation:
         return observations
 
     def _in_range(self, lat: float, lon: float) -> bool:
-        distance = haversine_distance_km(
+        distance = haversine_distance(
             self.lat,
             self.lon,
             lat,

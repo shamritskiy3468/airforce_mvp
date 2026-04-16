@@ -8,14 +8,20 @@ from engine.sinks import JsonlSink, NullSink, ConsoleSink
 
 class Helpers:
     @staticmethod
-    def export_dots(input_path: Union[str, Path],output_dir: Union[str, Path]) -> None:
+    def export_dots(
+        input_path: Union[str, Path],
+        output_dir: Union[str, Path],
+        limit: int = 50,
+    ) -> None:
         """
         Читает JSONL-файл, группирует записи по object_id
         и создаёт отдельный CSV-файл для каждого объекта.
+        limit ограничивает число экспортируемых файлов, максимум 50.
         """
         input_path = Path(input_path)
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
+        limit = max(1, min(int(limit), 50))
 
         # удобно добавлять на карту QGIS чтоб посмотреть че там получается
         
@@ -42,7 +48,8 @@ class Helpers:
                 if object_id and lat is not None and lon is not None:
                     grouped.setdefault(object_id, []).append((lat, lon))
 
-        for object_id, coords in grouped.items():
+        for object_id in sorted(grouped)[:limit]:
+            coords = grouped[object_id]
             filename = output_dir / f"{object_id}_dots.csv"
 
             with filename.open("w", newline="", encoding="utf-8") as outfile:

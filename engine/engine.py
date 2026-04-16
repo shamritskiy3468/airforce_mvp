@@ -22,7 +22,7 @@ class SimulationEngine:
     Центральный orchestration-слой симуляции:
       * конфиг,
       * transient spawner (spawn/despawn),
-      * генерация PositionEvent и отправка в sink,
+      * генерация TruthEvent и отправка в sink,
       * единая точка хранения current_time.
     """
 
@@ -71,9 +71,9 @@ class SimulationEngine:
             self.objects.append(obj)
             self.navigation_policies[obj.object_id] = self._default_policy_for(obj)
 
-        # 2) Двигаем объекты и создаём PositionEvent
-        events: List[TruthEvent] = []
-        ingest_time = datetime.datetime.now(datetime.timezone.utc)
+        # 2) Двигаем объекты и создаём truth-события
+        events = [] # list of [TruthEvent]
+        ingest_time = datetime.datetime.now(datetime.timezone.utc) # ingest_time - когда событие "поступило" в систему, может отличаться от event_time, которая внутри события и соответствует симуляционному времени
 
         for obj in list(self.objects):
             last_before = obj.latest_position()
@@ -168,12 +168,7 @@ class SimulationEngine:
 
         return len(events)
 
-    def _should_publish(
-        self,
-        obj: AirObject,
-        last_before: Optional[Position],
-        last_after: Position,
-    ) -> bool:
+    def _should_publish(self, obj: AirObject, last_before: Optional[Position], last_after: Position) -> bool:
         last_emitted = self._last_emitted_position_by_id.get(obj.object_id)
         last_emitted_time = self._last_emitted_time_by_id.get(obj.object_id)
 
