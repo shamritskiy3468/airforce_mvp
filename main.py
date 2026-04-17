@@ -4,17 +4,8 @@ from pathlib import Path
 
 from domain.flight import Flight
 from domain.playback_object import PlaybackObject
+from configs import build_config
 from generator.flight_factory import FlightFactory
-from engine.config import (
-    AreaConfig,
-    EventConfig,
-    FleetConfig,
-    SimulationConfig,
-    TimeConfig,
-    TransientConfig,
-    RuntimeConfig,
-)
-# тока для дебага
 from helpers.helpers import Helpers
 from helpers.scenario_loader import ScenarioLoader
 from engine.engine import SimulationEngine
@@ -29,50 +20,7 @@ def main(args):
     if args.clean:
         Helpers.drop_output_files()
 
-    config = SimulationConfig(
-        seed=42,
-        time=TimeConfig(
-            tick_seconds=5, # 1.0 = realtime (1 sec real = 1 sec sim), >1 ускорение, <1 замедление
-            time_scale=1.0, # ускорение симуляции (только для realtime режима)
-            max_steps=1000, # шаги симуляции, после которых она завершится (для realtime может быть прервано вручную)
-        ),
-        # QGIS selector для Европы (по границам примерно) + чуть больше, чтобы было 
-        # видно объекты, которые только входят/уходят из зоны
-        area=AreaConfig(
-            min_lat=51.293,
-            max_lat=56.285,
-            min_lon=23.140,
-            max_lon=33.313,
-        ),
-        transient=TransientConfig(
-            enabled=False, ### ВЫКЛЮЧИЛ РАДИ ДЕБУГА
-            initial_objects=2,
-            spawn_rate_per_tick=0.07,
-            ttl_seconds_min=30,
-            ttl_seconds_max=300,
-            travel_km_min=3.0,
-            travel_km_max=10.0,
-        ),
-        fleet=FleetConfig(
-            scheduled_traffic=10,
-            unscheduled_traffic=10,
-        ),
-        runtime=RuntimeConfig(
-            realtime=False,
-        ),
-        events=EventConfig(
-            emit_interval_seconds_by_type={
-                "fixed_wing_aircraft": 15,
-                "rotary_wing_aircraft": 5,
-                "multirotor_uav": 5,
-                "fixed_wing_uav": 10,
-                "balloon": 5,
-                "bird_flock": 5,
-                "weather_cell": 15,
-            },
-            emit_when_stationary=False,  # нужно ли спамить стоячие объекты
-        ),
-    )
+    config = build_config(args.profile)
 
     objects = FlightFactory.generate_scenario(
         scheduled_traffic=config.fleet.scheduled_traffic,
@@ -162,13 +110,21 @@ def main(args):
         print(
             f"done | steps={stats.steps} | events={stats.events} | "
             f"elapsed={stats.elapsed_real_seconds:.2f}s | eps={stats.events_per_second:.0f} | "
-            f"active_objects={len(engine.objects)}"
+            f"active_objects={len(engine.objects)} | "
+            f"avg_lag_ms={stats.avg_step_lag_seconds * 1000:.2f} | "
+            f"max_lag_ms={stats.max_step_lag_seconds * 1000:.2f}"
         )
     elif interrupted:
         print(f"partial_run | active_objects={len(engine.objects)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--profile",
+        choices=["debug", "realtime_demo", "load"],
+        default="debug",
+        help="Simulation config profile",
+    )
     parser.add_argument("--sink",
                         required=True,
                         choices=["json", "console", "null"],

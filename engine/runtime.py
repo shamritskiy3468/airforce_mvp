@@ -12,6 +12,8 @@ class RunStats:
     steps: int
     events: int
     elapsed_real_seconds: float
+    avg_step_lag_seconds: float = 0.0
+    max_step_lag_seconds: float = 0.0
 
     @property
     def events_per_second(self) -> float:
@@ -29,7 +31,13 @@ def run_fast(engine: SimulationEngine, steps: int) -> RunStats:
     for _ in range(steps):
         events += engine.step()
     t1 = time.perf_counter()
-    return RunStats(steps=steps, events=events, elapsed_real_seconds=(t1 - t0))
+    return RunStats(
+        steps=steps,
+        events=events,
+        elapsed_real_seconds=(t1 - t0),
+        avg_step_lag_seconds=0.0,
+        max_step_lag_seconds=0.0,
+    )
 
 
 def run_realtime(
@@ -57,6 +65,8 @@ def run_realtime(
     t0 = time.perf_counter()
     next_deadline = t0
     events = 0
+    lag_sum = 0.0
+    lag_max = 0.0
 
     for _ in range(steps):
         # Делаем шаг
@@ -66,9 +76,19 @@ def run_realtime(
         next_deadline += target_step_real
         now = time.perf_counter()
         sleep_for = next_deadline - now
+        step_lag = max(0.0, -sleep_for)
+        lag_sum += step_lag
+        if step_lag > lag_max:
+            lag_max = step_lag
         if sleep_for > 0:
             time.sleep(min(sleep_for, sleep_max_seconds))
 
     t1 = time.perf_counter()
-    return RunStats(steps=steps, events=events, elapsed_real_seconds=(t1 - t0))
+    return RunStats(
+        steps=steps,
+        events=events,
+        elapsed_real_seconds=(t1 - t0),
+        avg_step_lag_seconds=(lag_sum / steps if steps > 0 else 0.0),
+        max_step_lag_seconds=lag_max,
+    )
 
