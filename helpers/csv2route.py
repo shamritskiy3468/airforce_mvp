@@ -1,24 +1,26 @@
 import csv
+
 from domain.route import Route, Waypoint
 
 class Csv2Route:
-    def __init__(self, filename: str):
+    def __init__(self, filename: str, default_altitude_m: float = 0.0):
         """Load and return Route object from CSV file"""
-        self.route = self._parse_csv(filename)
+        self.route = self._parse_csv(filename, default_altitude_m=default_altitude_m)
     
     @staticmethod
-    def _parse_csv(filename: str) -> Route:
+    def _parse_csv(filename: str, default_altitude_m: float = 0.0) -> Route:
         """Parse CSV file and return Route object"""
         waypoints = []
         
         with open(filename, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
+                altitude_raw = row.get("altitude")
                 waypoints.append(
                     Waypoint(
                         lat=float(row["lat"]),
                         lon=float(row["lon"]),
-                        altitude=float(row["altitude"])
+                        altitude=float(altitude_raw) if altitude_raw not in (None, "") else float(default_altitude_m)
                     )
                 )
         if len(waypoints) < 2:

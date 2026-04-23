@@ -40,6 +40,15 @@ class CooperationStatus(Enum):
     NON_COOPERATIVE = "non_cooperative"
     SILENT = "silent"
 
+
+class FlightCategory(Enum):
+    UNKNOWN = "unknown"
+    PASSENGER = "passenger"
+    TRAINING = "training"
+    GENERAL_AVIATION = "general_aviation"
+    UTILITY = "utility"
+
+
 class FlightState(Enum):
     ON_GROUND = "on_ground"
     TAKEOFF = "takeoff"
@@ -52,3 +61,18 @@ class FlightState(Enum):
 class SpeedSource(Enum):
     RADAR = "radar"           # скорость пришла от радара (мы ей доверяем)
     CALCULATED = "calculated" # скорость рассчитана по координатам
+
+
+class TruthEventType(Enum):
+    SPAWNED = "spawned"
+    POSITION_UPDATED = "position_updated"
+    DESPAWNED = "despawned"
+
+
+class DespawnReason(Enum):
+    TRANSIENT_EXPIRED = "transient_expired"
+    TRANSIENT_DISTANCE_EXHAUSTED = "transient_distance_exhausted"
+    TRANSIENT_LEFT_AREA = "transient_left_area"
+    ROUTE_COMPLETED = "route_completed"
+    PLAYBACK_COMPLETED = "playback_completed"
+    MISSION_COMPLETED = "mission_completed"

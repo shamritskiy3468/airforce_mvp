@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import itertools
 import time
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Optional
 
 from .engine import SimulationEngine
 
@@ -12,6 +13,8 @@ class RunStats:
     steps: int
     events: int
     elapsed_real_seconds: float
+    avg_step_lag_seconds: float = 0.0
+    max_step_lag_seconds: float = 0.0
 
     @property
     def events_per_second(self) -> float:
@@ -20,23 +23,45 @@ class RunStats:
         return self.events / self.elapsed_real_seconds
 
 
-def run_fast(engine: SimulationEngine, steps: int) -> RunStats:
+ProgressCallback = Callable[[int, int, float, SimulationEngine], None]
+
+
+def run_fast(
+    engine: SimulationEngine,
+    steps: int | None,
+    progress_every_steps: int = 0,
+    progress_cb: ProgressCallback | None = None,
+) -> RunStats:
     """
     Просто прогоняет steps тиков максимально быстро (без pacing).
     """
     t0 = time.perf_counter()
     events = 0
-    for _ in range(steps):
+    step_count = 0
+    for step in (
+        itertools.count(1) if steps is None else range(1, steps + 1)
+    ):
+        step_count = step
         events += engine.step()
+        if progress_every_steps > 0 and step % progress_every_steps == 0 and progress_cb is not None:
+            progress_cb(step, events, time.perf_counter() - t0, engine)
     t1 = time.perf_counter()
-    return RunStats(steps=steps, events=events, elapsed_real_seconds=(t1 - t0))
+    return RunStats(
+        steps=step_count,
+        events=events,
+        elapsed_real_seconds=(t1 - t0),
+        avg_step_lag_seconds=0.0,
+        max_step_lag_seconds=0.0,
+    )
 
 
 def run_realtime(
     engine: SimulationEngine,
-    steps: int,
+    steps: int | None,
     time_scale: float = 1.0,
     sleep_max_seconds: float = 0.05,
+    progress_every_steps: int = 0,
+    progress_cb: ProgressCallback | None = None,
 ) -> RunStats:
     """
     "Правильный" realtime loop (или ускоренный), без привязки к print/sink.
@@ -57,18 +82,39 @@ def run_realtime(
     t0 = time.perf_counter()
     next_deadline = t0
     events = 0
+    lag_sum = 0.0
+    lag_max = 0.0
+    step_count = 0
 
-    for _ in range(steps):
+    for step in (
+        itertools.count(1) if steps is None else range(1, steps + 1)
+    ):
+        step_count = step
         # Делаем шаг
         events += engine.step()
+        if progress_every_steps > 0 and step % progress_every_steps == 0 and progress_cb is not None:
+            progress_cb(step, events, time.perf_counter() - t0, engine)
 
-        # Ждём до дедлайна следующего шага
+        # Ждём до дедлайна следующего шага. Раньше здесь был только один sleep(),
+        # из-за чего длинные realtime-шаги фактически не пейсились до конца.
         next_deadline += target_step_real
-        now = time.perf_counter()
-        sleep_for = next_deadline - now
-        if sleep_for > 0:
+        while True:
+            now = time.perf_counter()
+            sleep_for = next_deadline - now
+            if sleep_for <= 0:
+                break
             time.sleep(min(sleep_for, sleep_max_seconds))
 
-    t1 = time.perf_counter()
-    return RunStats(steps=steps, events=events, elapsed_real_seconds=(t1 - t0))
+        step_lag = max(0.0, time.perf_counter() - next_deadline)
+        lag_sum += step_lag
+        if step_lag > lag_max:
+            lag_max = step_lag
 
+    t1 = time.perf_counter()
+    return RunStats(
+        steps=step_count,
+        events=events,
+        elapsed_real_seconds=(t1 - t0),
+        avg_step_lag_seconds=(lag_sum / step_count if step_count > 0 else 0.0),
+        max_step_lag_seconds=lag_max,
+    )
