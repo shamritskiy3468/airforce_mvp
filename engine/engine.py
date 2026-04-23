@@ -5,7 +5,7 @@ import random
 from typing import Dict, List, Optional
 
 from domain.air_object import AirObject, Position
-from domain.enums import DespawnReason, FlightState, TruthEventType
+from domain.enums import DespawnReason, FlightState, ScenarioBucket, TruthEventType
 from domain.flight import Flight
 from domain.playback_object import PlaybackObject
 from engine.navigation.base import NavigationPolicy
@@ -76,6 +76,10 @@ class SimulationEngine:
         ingest_time = datetime.datetime.now(datetime.timezone.utc) # ingest_time - когда событие "поступило" в систему, может отличаться от event_time, которая внутри события и соответствует симуляционному времени
 
         for obj in list(self.objects):
+            if obj.activation_time is not None and self.current_time < obj.activation_time:
+                # Объект ещё "не появился" в мире симуляции.
+                continue
+
             last_before = obj.latest_position()
 
             if last_before is not None and obj.object_id not in self._spawned_object_ids:
@@ -110,7 +114,12 @@ class SimulationEngine:
                 continue
 
             if not self.config.area.contains(last_after.lat, last_after.lon):
-                continue
+                allow_outside = (
+                    self.config.events.publish_outside_area_for_scheduled
+                    and obj.scenario_bucket == ScenarioBucket.SCHEDULED_TRAFFIC
+                )
+                if not allow_outside:
+                    continue
 
             if self._spawner.is_transient(obj) and last_before is not None:
                 dist_km = haversine_distance(

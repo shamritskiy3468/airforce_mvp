@@ -1,5 +1,6 @@
 import datetime
 import argparse
+import random
 from pathlib import Path
 
 from domain.flight import Flight
@@ -21,12 +22,15 @@ def main(args):
         Helpers.drop_output_files()
 
     config = build_config(args.profile)
+    if config.seed is not None:
+        random.seed(config.seed)
 
     objects = FlightFactory.generate_scenario(
         scheduled_traffic=config.fleet.scheduled_traffic,
         unscheduled_traffic=config.fleet.unscheduled_traffic,
         transient_phenomena=0,
         area=config.area,
+        restrict_airport_pairs_to_area=config.fleet.restrict_airport_pairs_to_area,
     )
 
     start_time = datetime.datetime.now(datetime.timezone.utc)
@@ -64,6 +68,28 @@ def main(args):
                 timestamp=start_time,
             )
 
+    # Разнос времени старта объектов, чтобы все не "взлетали" одновременно.
+    if config.runtime.startup_spread_seconds > 0:
+        for obj in objects:
+            offset = random.uniform(0, config.runtime.startup_spread_seconds)
+            obj.activation_time = start_time + datetime.timedelta(seconds=offset)
+    else:
+        for obj in objects:
+            obj.activation_time = start_time
+
+    activation_offsets = []
+    for obj in objects:
+        if obj.activation_time is None:
+            continue
+        activation_offsets.append((obj.activation_time - start_time).total_seconds())
+    if activation_offsets:
+        print(
+            "startup | "
+            f"objects={len(objects)} | "
+            f"activation_spread_sec=[{min(activation_offsets):.1f}..{max(activation_offsets):.1f}] | "
+            f"simultaneous_start={'yes' if max(activation_offsets) == 0 else 'no'}"
+        )
+
     navigation_policies = {}
 
     for obj in objects:
@@ -90,11 +116,33 @@ def main(args):
 
     stats = None
     interrupted = False
+
+    def progress_log(step: int, total_events: int, elapsed_real_seconds: float, eng: SimulationEngine):
+        sim_elapsed_seconds = step * config.time.tick_seconds
+        sim_hours = sim_elapsed_seconds / 3600.0
+        eps = total_events / elapsed_real_seconds if elapsed_real_seconds > 0 else 0.0
+        print(
+            f"progress | step={step}/{config.time.max_steps} | "
+            f"sim_hours={sim_hours:.2f} | elapsed_real={elapsed_real_seconds:.1f}s | "
+            f"eps={eps:.0f} | active_objects={len(eng.objects)}"
+        )
+
     try:
         if config.runtime.realtime:
-            stats = run_realtime(engine, steps=config.time.max_steps, time_scale=config.time.time_scale)
+            stats = run_realtime(
+                engine,
+                steps=config.time.max_steps,
+                time_scale=config.time.time_scale,
+                progress_every_steps=config.runtime.progress_every_steps,
+                progress_cb=progress_log,
+            )
         else:
-            stats = run_fast(engine, steps=config.time.max_steps)
+            stats = run_fast(
+                engine,
+                steps=config.time.max_steps,
+                progress_every_steps=config.runtime.progress_every_steps,
+                progress_cb=progress_log,
+            )
     except KeyboardInterrupt:
         interrupted = True
         print("\ninterrupted | exporting partial waypoints from generated events")

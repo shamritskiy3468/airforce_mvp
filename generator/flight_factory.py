@@ -29,16 +29,91 @@ class Airport:
 
 
 AIRPORTS: list[Airport] = [
-    Airport(code="MSQ", name="Minsk National", lat=53.8825, lon=28.0307),
-    Airport(code="GME", name="Gomel", lat=52.5270, lon=31.0167),
-    Airport(code="GNA", name="Grodno", lat=53.6020, lon=24.0538),
-    Airport(code="BQT", name="Brest", lat=52.1083, lon=23.8981),
-    Airport(code="VTB", name="Vitebsk", lat=55.1265, lon=30.3496),
-    Airport(code="MVQ", name="Mogilev", lat=53.9549, lon=30.0951),
-    Airport(code="VNO", name="Vilnius", lat=54.6341, lon=25.2858),
-    Airport(code="KUN", name="Kaunas", lat=54.9639, lon=24.0848),
-    Airport(code="PLQ", name="Palanga", lat=55.9732, lon=21.0939),
-    Airport(code="RIX", name="Riga", lat=56.9236, lon=23.9711),
+    Airport(code="AMS", name="Amsterdam Airport Schiphol", lat=52.3086, lon=4.7639),
+    Airport(code="RTM", name="Rotterdam The Hague Airport", lat=51.9569, lon=4.4372),
+    Airport(code="EIN", name="Eindhoven Airport", lat=51.4501, lon=5.3745),
+    Airport(code="MST", name="Maastricht Aachen Airport", lat=50.9117, lon=5.7701),
+    Airport(code="GRQ", name="Groningen Airport Eelde", lat=53.1197, lon=6.5794),
+    Airport(code="LHR", name="London Heathrow Airport", lat=51.4700, lon=-0.4543),
+    Airport(code="LGW", name="London Gatwick Airport", lat=51.1537, lon=-0.1821),
+    Airport(code="STN", name="London Stansted Airport", lat=51.8850, lon=0.2350),
+    Airport(code="LTN", name="London Luton Airport", lat=51.8747, lon=-0.3683),
+    Airport(code="MAN", name="Manchester Airport", lat=53.3650, lon=-2.2728),
+    Airport(code="EDI", name="Edinburgh Airport", lat=55.9500, lon=-3.3725),
+    Airport(code="GLA", name="Glasgow Airport", lat=55.8719, lon=-4.4331),
+    Airport(code="BHX", name="Birmingham Airport", lat=52.4539, lon=-1.7480),
+    Airport(code="CDG", name="Paris Charles de Gaulle Airport", lat=49.0097, lon=2.5479),
+    Airport(code="ORY", name="Paris Orly Airport", lat=48.7262, lon=2.3652),
+    Airport(code="NCE", name="Nice Côte d'Azur Airport", lat=43.6653, lon=7.2150),
+    Airport(code="LYS", name="Lyon-Saint Exupéry Airport", lat=45.7256, lon=5.0811),
+    Airport(code="MRS", name="Marseille Provence Airport", lat=43.4367, lon=5.2150),
+    Airport(code="TLS", name="Toulouse-Blagnac Airport", lat=43.6293, lon=1.3633),
+    Airport(code="FRA", name="Frankfurt Airport", lat=50.0379, lon=8.5622),
+    Airport(code="MUC", name="Munich Airport", lat=48.3538, lon=11.7861),
+    Airport(code="DUS", name="Düsseldorf Airport", lat=51.2895, lon=6.7668),
+    Airport(code="BER", name="Berlin Brandenburg Airport", lat=52.3667, lon=13.5033),
+    Airport(code="HAM", name="Hamburg Airport", lat=53.6304, lon=9.9882),
+    Airport(code="STR", name="Stuttgart Airport", lat=48.6899, lon=9.2219),
+    Airport(code="CGN", name="Cologne Bonn Airport", lat=50.8659, lon=7.1427),
+    Airport(code="MAD", name="Madrid Barajas Airport", lat=40.4983, lon=-3.5676),
+    Airport(code="BCN", name="Barcelona El Prat Airport", lat=41.2974, lon=2.0833),
+    Airport(code="PMI", name="Palma de Mallorca Airport", lat=39.5517, lon=2.7388),
+    Airport(code="AGP", name="Málaga Airport", lat=36.6749, lon=-4.4991),
+    Airport(code="VLC", name="Valencia Airport", lat=39.4893, lon=-0.4816),
+    Airport(code="SVQ", name="Seville Airport", lat=37.4180, lon=-5.8931),
+    Airport(code="FCO", name="Rome Fiumicino Airport", lat=41.8003, lon=12.2389),
+    Airport(code="MXP", name="Milan Malpensa Airport", lat=45.6301, lon=8.7281),
+    Airport(code="LIN", name="Milan Linate Airport", lat=45.4451, lon=9.2767),
+    Airport(code="VCE", name="Venice Marco Polo Airport", lat=45.5053, lon=12.3519),
+    Airport(code="NAP", name="Naples International Airport", lat=40.8860, lon=14.2908),
+    Airport(code="ZRH", name="Zurich Airport", lat=47.4581, lon=8.5555),
+    Airport(code="GVA", name="Geneva Airport", lat=46.2381, lon=6.1089),
+    Airport(code="VIE", name="Vienna International Airport", lat=48.1103, lon=16.5697),
+    Airport(code="SZG", name="Salzburg Airport", lat=47.7933, lon=13.0043),
+    Airport(code="BRU", name="Brussels Airport", lat=50.9010, lon=4.4844),
+    Airport(code="CRL", name="Brussels South Charleroi Airport", lat=50.4592, lon=4.4538),
+    Airport(code="CPH", name="Copenhagen Airport", lat=55.6181, lon=12.6560),
+    Airport(code="BLL", name="Billund Airport", lat=55.7403, lon=9.1518),
+    Airport(code="ARN", name="Stockholm Arlanda Airport", lat=59.6519, lon=17.9186),
+    Airport(code="GOT", name="Gothenburg Landvetter Airport", lat=57.6628, lon=12.2798),
+    Airport(code="OSL", name="Oslo Gardermoen Airport", lat=60.1976, lon=11.1004),
+    Airport(code="BGO", name="Bergen Airport", lat=60.2934, lon=5.2181),
+    Airport(code="HEL", name="Helsinki Airport", lat=60.3172, lon=24.9633),
+    Airport(code="TMP", name="Tampere Airport", lat=61.4141, lon=23.6044),
+    Airport(code="DUB", name="Dublin Airport", lat=53.4213, lon=-6.2701),
+    Airport(code="ORK", name="Cork Airport", lat=51.8413, lon=-8.4911),
+    Airport(code="PRG", name="Prague Airport", lat=50.1008, lon=14.2600),
+    Airport(code="BRQ", name="Brno Airport", lat=49.1513, lon=16.6944),
+    Airport(code="WAW", name="Warsaw Chopin Airport", lat=52.1657, lon=20.9671),
+    Airport(code="KRK", name="Kraków Airport", lat=50.0777, lon=19.7848),
+    Airport(code="GDN", name="Gdańsk Airport", lat=54.3776, lon=18.4662),
+    Airport(code="BUD", name="Budapest Airport", lat=47.4369, lon=19.2556),
+    Airport(code="ATH", name="Athens International Airport", lat=37.9364, lon=23.9475),
+    Airport(code="HER", name="Heraklion Airport", lat=35.3397, lon=25.1803),
+    Airport(code="IST", name="Istanbul Airport", lat=41.2753, lon=28.7519),
+    Airport(code="SAW", name="Istanbul Sabiha Gökçen Airport", lat=40.8986, lon=29.3092),
+    Airport(code="LIS", name="Lisbon Airport", lat=38.7742, lon=-9.1342),
+    Airport(code="OPO", name="Porto Airport", lat=41.2481, lon=-8.6814),
+    Airport(code="KEF", name="Keflavik International Airport", lat=63.9850, lon=-22.6056),
+    Airport(code="RIX", name="Riga Airport", lat=56.9236, lon=23.9711),
+    Airport(code="TLL", name="Tallinn Airport", lat=59.4133, lon=24.8328),
+    Airport(code="VNO", name="Vilnius Airport", lat=54.6341, lon=25.2858),
+    Airport(code="SOF", name="Sofia Airport", lat=42.6952, lon=23.4062),
+    Airport(code="VAR", name="Varna Airport", lat=43.2321, lon=27.8251),
+    Airport(code="OTP", name="Bucharest Henri Coandă Airport", lat=44.5711, lon=26.0850),
+    Airport(code="BEG", name="Belgrade Airport", lat=44.8184, lon=20.3091),
+    Airport(code="ZAG", name="Zagreb Airport", lat=45.7429, lon=16.0688),
+    Airport(code="LJU", name="Ljubljana Airport", lat=46.2237, lon=14.4576),
+    Airport(code="SKG", name="Thessaloniki Airport", lat=40.5197, lon=22.9709),
+    Airport(code="TGD", name="Podgorica Airport", lat=42.3594, lon=19.2519),
+    Airport(code="SJJ", name="Sarajevo Airport", lat=43.8246, lon=18.3315),
+    Airport(code="TIA", name="Tirana Airport", lat=41.4147, lon=19.7206),
+    Airport(code="EVN", name="Yerevan Zvartnots Airport", lat=40.1473, lon=44.3959),
+    Airport(code="GYD", name="Baku Heydar Aliyev Airport", lat=40.4675, lon=50.0467),
+    Airport(code="MSQ", name="Minsk National Airport", lat=53.8825, lon=28.0307),
+    Airport(code="KIV", name="Chișinău Airport", lat=46.9277, lon=28.9310),
+    Airport(code="LCA", name="Larnaca Airport", lat=34.8751, lon=33.6249),
+    Airport(code="MLA", name="Malta International Airport", lat=35.8575, lon=14.4775)
 ]
 
 
@@ -46,11 +121,22 @@ class FlightFactory:
     """Scenario generator for scheduled traffic, unscheduled traffic, and transient phenomena."""
 
     @staticmethod
-    def generate_scenario(scheduled_traffic: int = 2, unscheduled_traffic: int = 3, transient_phenomena: int = 0, area: Optional[AreaConfig] = None) -> List[AirObject]:
+    def generate_scenario(
+        scheduled_traffic: int = 2,
+        unscheduled_traffic: int = 3,
+        transient_phenomena: int = 0,
+        area: Optional[AreaConfig] = None,
+        restrict_airport_pairs_to_area: bool = True,
+    ) -> List[AirObject]:
         scenario = []
 
         for _ in range(scheduled_traffic):
-            scenario.append(FlightFactory.create_scheduled_traffic(area))
+            scenario.append(
+                FlightFactory.create_scheduled_traffic(
+                    area,
+                    restrict_airport_pairs_to_area=restrict_airport_pairs_to_area,
+                )
+            )
 
         for _ in range(unscheduled_traffic):
             scenario.append(FlightFactory.create_unscheduled_traffic(area))
@@ -61,7 +147,7 @@ class FlightFactory:
         return scenario
 
     @staticmethod
-    def create_scheduled_traffic(area: Optional[AreaConfig]) -> AirObject:
+    def create_scheduled_traffic(area: Optional[AreaConfig], restrict_airport_pairs_to_area: bool = True) -> AirObject:
         platform_class = random.choices(
             population=[
                 PlatformClass.FIXED_WING_AIRCRAFT,
@@ -82,7 +168,10 @@ class FlightFactory:
             and mission_profile == MissionProfile.TRANSIT
             and random.random() < 0.75
         ):
-            passenger = FlightFactory.create_scheduled_passenger_flight(area)
+            passenger = FlightFactory.create_scheduled_passenger_flight(
+                area,
+                restrict_airport_pairs_to_area=restrict_airport_pairs_to_area,
+            )
             if passenger is not None:
                 return passenger
 
@@ -107,8 +196,9 @@ class FlightFactory:
         )
 
     @staticmethod
-    def create_scheduled_passenger_flight(area: Optional[AreaConfig]) -> Flight | None:
-        airport_pair = FlightFactory._sample_airport_pair(area)
+    def create_scheduled_passenger_flight(area: Optional[AreaConfig], restrict_airport_pairs_to_area: bool = True) -> Flight | None:
+        area_for_airports = area if restrict_airport_pairs_to_area else None
+        airport_pair = FlightFactory._sample_airport_pair(area_for_airports)
         if airport_pair is None:
             return None
 

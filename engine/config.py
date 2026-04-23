@@ -39,6 +39,7 @@ class TimeConfig:
 class FleetConfig:
     scheduled_traffic: int = 0
     unscheduled_traffic: int = 0
+    restrict_airport_pairs_to_area: bool = True
 
 
 @dataclass(frozen=True)
@@ -51,12 +52,15 @@ class RuntimeConfig:
     """
 
     realtime: bool = False
+    progress_every_steps: int = 500
+    startup_spread_seconds: int = 0
 
 
 @dataclass(frozen=True)
 class EventConfig:
     emit_interval_seconds_by_type: dict[str, int] = field(default_factory=dict)
     emit_when_stationary: bool = False # нужно ли спамить стоячие объекты (например, вертолеты на земле) - скорее всего нет :)
+    publish_outside_area_for_scheduled: bool = True
 
 # Конфиг для симуляции целиком
 @dataclass(frozen=True)

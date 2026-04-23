@@ -54,8 +54,16 @@ def build_config(profile: str) -> SimulationConfig:
                 travel_km_min=3.0,
                 travel_km_max=10.0,
             ),
-            fleet=FleetConfig(scheduled_traffic=2, unscheduled_traffic=3),
-            runtime=RuntimeConfig(realtime=False),
+            fleet=FleetConfig(
+                scheduled_traffic=2,
+                unscheduled_traffic=3,
+                restrict_airport_pairs_to_area=True,
+            ),
+            runtime=RuntimeConfig(
+                realtime=False,
+                progress_every_steps=100,
+                startup_spread_seconds=60,
+            ),
             events=base_events,
         )
 
@@ -73,15 +81,23 @@ def build_config(profile: str) -> SimulationConfig:
                 travel_km_min=3.0,
                 travel_km_max=10.0,
             ),
-            fleet=FleetConfig(scheduled_traffic=5, unscheduled_traffic=5),
-            runtime=RuntimeConfig(realtime=True),
+            fleet=FleetConfig(
+                scheduled_traffic=5,
+                unscheduled_traffic=5,
+                restrict_airport_pairs_to_area=False,
+            ),
+            runtime=RuntimeConfig(
+                realtime=True,
+                progress_every_steps=20,
+                startup_spread_seconds=300,
+            ),
             events=base_events,
         )
 
     if profile == "load":
         return SimulationConfig(
             seed=42,
-            time=TimeConfig(tick_seconds=1, time_scale=20.0, max_steps=5000),
+            time=TimeConfig(tick_seconds=1, time_scale=20.0, max_steps=10000),
             area=base_area,
             transient=TransientConfig(
                 enabled=True,
@@ -92,8 +108,16 @@ def build_config(profile: str) -> SimulationConfig:
                 travel_km_min=3.0,
                 travel_km_max=10.0,
             ),
-            fleet=FleetConfig(scheduled_traffic=100, unscheduled_traffic=400),
-            runtime=RuntimeConfig(realtime=False),
+            fleet=FleetConfig(
+                scheduled_traffic=400,
+                unscheduled_traffic=400,
+                restrict_airport_pairs_to_area=False,
+            ),
+            runtime=RuntimeConfig(
+                realtime=False,
+                progress_every_steps=250,
+                startup_spread_seconds=900,
+            ),
             events=base_events,
         )
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import Optional
+from typing import Callable, Optional
 
 from .engine import SimulationEngine
 
@@ -22,14 +22,24 @@ class RunStats:
         return self.events / self.elapsed_real_seconds
 
 
-def run_fast(engine: SimulationEngine, steps: int) -> RunStats:
+ProgressCallback = Callable[[int, int, float, SimulationEngine], None]
+
+
+def run_fast(
+    engine: SimulationEngine,
+    steps: int,
+    progress_every_steps: int = 0,
+    progress_cb: ProgressCallback | None = None,
+) -> RunStats:
     """
     Просто прогоняет steps тиков максимально быстро (без pacing).
     """
     t0 = time.perf_counter()
     events = 0
-    for _ in range(steps):
+    for step in range(1, steps + 1):
         events += engine.step()
+        if progress_every_steps > 0 and step % progress_every_steps == 0 and progress_cb is not None:
+            progress_cb(step, events, time.perf_counter() - t0, engine)
     t1 = time.perf_counter()
     return RunStats(
         steps=steps,
@@ -45,6 +55,8 @@ def run_realtime(
     steps: int,
     time_scale: float = 1.0,
     sleep_max_seconds: float = 0.05,
+    progress_every_steps: int = 0,
+    progress_cb: ProgressCallback | None = None,
 ) -> RunStats:
     """
     "Правильный" realtime loop (или ускоренный), без привязки к print/sink.
@@ -68,9 +80,11 @@ def run_realtime(
     lag_sum = 0.0
     lag_max = 0.0
 
-    for _ in range(steps):
+    for step in range(1, steps + 1):
         # Делаем шаг
         events += engine.step()
+        if progress_every_steps > 0 and step % progress_every_steps == 0 and progress_cb is not None:
+            progress_cb(step, events, time.perf_counter() - t0, engine)
 
         # Ждём до дедлайна следующего шага
         next_deadline += target_step_real

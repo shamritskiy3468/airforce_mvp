@@ -32,6 +32,7 @@ class AirObject:
     truth_affiliation: TruthAffiliation = TruthAffiliation.NEUTRAL
     cooperation_status: CooperationStatus = CooperationStatus.SILENT
     kinematics: Optional[KinematicsProfile] = None
+    activation_time: Optional[datetime.datetime] = None
     positions: List[Position] = field(default_factory=list)
     max_history: int = 300
 
