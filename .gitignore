@@ -7,3 +7,6 @@ helpers/moving_test.py
 helpers/belarus_map.png
 .DS_Store
 maps/
+infrastructure/kafka/data/
+infrastructure/kafka/compose.md
+infrastructure/kafka/README.md

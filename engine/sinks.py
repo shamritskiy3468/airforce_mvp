@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from dataclasses import asdict
+from pathlib import Path
 from typing import Iterable, Optional
 
 from .events import TruthEvent
@@ -35,14 +36,19 @@ class ConsoleSink(EventSink):
             )
 
 
-class JsonlSink(EventSink):
+class JsonSink(EventSink):
     """
-    простой синк: пишет события в JSONL файл.
+    Простой синк: пишет события в JSON файл.
     Для нагрузки важно писать батчами.
     """
 
     def __init__(self, path: str):
         self._path = path
+        Path(self._path).parent.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def path(self) -> str:
+        return self._path
 
     def publish(self, events: Iterable[TruthEvent]) -> None:
         with open(self._path, "a", encoding="utf-8") as f:

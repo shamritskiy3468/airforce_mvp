@@ -67,6 +67,7 @@ class SimulationEngine:
         """
 
         dt = self.config.time.tick_seconds
+        step_time = self.current_time + datetime.timedelta(seconds=dt)
 
         # 1) Спавним transient-явления (если надо)
         spawned = self._spawner.maybe_spawn(self.current_time)
@@ -91,6 +92,7 @@ class SimulationEngine:
                         obj=obj,
                         pos=last_before,
                         ingest_time=ingest_time,
+                        event_time=step_time,
                         event_type=TruthEventType.SPAWNED,
                     )
                 )
@@ -98,7 +100,8 @@ class SimulationEngine:
 
             policy = self.navigation_policies.get(obj.object_id)
             if policy is not None:
-                policy.move(obj, dt_seconds=dt, current_time=self.current_time)
+                # Policies compute object state for the end of the current tick.
+                policy.move(obj, dt_seconds=dt, current_time=step_time)
 
             last_after = obj.latest_position()
             if last_after is None:
@@ -110,6 +113,7 @@ class SimulationEngine:
                         obj=obj,
                         pos=last_after,
                         ingest_time=ingest_time,
+                        event_time=step_time,
                         event_type=TruthEventType.SPAWNED,
                     )
                 )
@@ -133,7 +137,12 @@ class SimulationEngine:
                 )
                 self._spawner.consume_distance(obj, dist_km)
 
-            if not self._should_publish(obj, last_before=last_before, last_after=last_after):
+            if not self._should_publish(
+                obj,
+                last_before=last_before,
+                last_after=last_after,
+                current_time=step_time,
+            ):
                 continue
 
             events.append(
@@ -141,11 +150,12 @@ class SimulationEngine:
                     obj=obj,
                     pos=last_after,
                     ingest_time=ingest_time,
+                    event_time=step_time,
                     event_type=TruthEventType.POSITION_UPDATED,
                 )
             )
             self._last_emitted_position_by_id[obj.object_id] = last_after
-            self._last_emitted_time_by_id[obj.object_id] = self.current_time
+            self._last_emitted_time_by_id[obj.object_id] = step_time
 
         # 3) Удаляем transient-явления по TTL/дистанции/выходу за границы
         kept: List[AirObject] = []
@@ -159,6 +169,7 @@ class SimulationEngine:
                             obj=obj,
                             pos=last,
                             ingest_time=ingest_time,
+                            event_time=step_time,
                             event_type=TruthEventType.DESPAWNED,
                             despawn_reason=despawn_reason,
                         )
@@ -176,11 +187,17 @@ class SimulationEngine:
         self.sink.publish(events)
 
         # 5) Двигаем симуляционное время
-        self.current_time += datetime.timedelta(seconds=dt)
+        self.current_time = step_time
 
         return len(events)
 
-    def _should_publish(self, obj: AirObject, last_before: Optional[Position], last_after: Position) -> bool:
+    def _should_publish(
+        self,
+        obj: AirObject,
+        last_before: Optional[Position],
+        last_after: Position,
+        current_time: datetime.datetime,
+    ) -> bool:
         last_emitted = self._last_emitted_position_by_id.get(obj.object_id)
         last_emitted_time = self._last_emitted_time_by_id.get(obj.object_id)
 
@@ -191,7 +208,7 @@ class SimulationEngine:
         if not moved_this_step and not self.config.events.emit_when_stationary:
             return False
 
-        seconds_since_emit = (self.current_time - last_emitted_time).total_seconds()
+        seconds_since_emit = (current_time - last_emitted_time).total_seconds()
         required_interval = self._emit_interval_seconds_for(obj)
         return seconds_since_emit >= required_interval
 
@@ -204,13 +221,15 @@ class SimulationEngine:
     def _mark_spawned(self, obj: AirObject, pos: Position) -> None:
         self._spawned_object_ids.add(obj.object_id)
         self._last_emitted_position_by_id[obj.object_id] = pos
-        self._last_emitted_time_by_id[obj.object_id] = self.current_time
+        timestamp = pos.timestamp if pos.timestamp is not None else self.current_time
+        self._last_emitted_time_by_id[obj.object_id] = timestamp
 
     def _build_event(
         self,
         obj: AirObject,
         pos: Position,
         ingest_time: datetime.datetime,
+        event_time: datetime.datetime,
         event_type: TruthEventType,
         despawn_reason: DespawnReason | None = None,
     ) -> TruthEvent:
@@ -233,7 +252,7 @@ class SimulationEngine:
             heading=pos.heading,
             speed=pos.speed,
             speed_source=pos.speed_source,
-            event_time=self.current_time,
+            event_time=event_time,
             ingest_time=ingest_time,
             run_id=self.run_id,
             schema_version=TRUTH_EVENT_SCHEMA_VERSION,

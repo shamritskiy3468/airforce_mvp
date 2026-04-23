@@ -3,7 +3,7 @@ import csv
 import datetime
 from pathlib import Path
 from typing import Union, Dict, List
-from engine.sinks import JsonlSink, NullSink, ConsoleSink
+from engine.sinks import JsonSink, NullSink, ConsoleSink
 
 
 class Helpers:
@@ -14,7 +14,7 @@ class Helpers:
         limit: int = 50,
     ) -> None:
         """
-        Читает JSONL-файл, группирует записи по object_id
+        Читает JSON-файл, группирует записи по object_id
         и создаёт отдельный CSV-файл для каждого объекта.
         limit ограничивает число экспортируемых файлов, максимум 50.
         """
@@ -82,7 +82,7 @@ class Helpers:
         if sink_type == "json":
             timestamp = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             json_sink_filename = f"./output/events_{timestamp}.json"
-            return JsonlSink(path=json_sink_filename)
+            return JsonSink(path=json_sink_filename)
         elif sink_type == "console":
             return ConsoleSink()
         elif sink_type == "null":
