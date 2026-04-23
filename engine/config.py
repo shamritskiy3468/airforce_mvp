@@ -33,7 +33,7 @@ class TimeConfig:
     # Управление временем симуляции
     tick_seconds: int = 5 # 1.0 = realtime (1 sec real = 1 sec sim), >1 ускорение, <1 замедление
     time_scale: float = 20.0
-    max_steps: int = 100000 # защита от бесконечности
+    max_steps: Optional[int] = 100000 # None = бесконечный режим
 
 @dataclass(frozen=True)
 class FleetConfig:

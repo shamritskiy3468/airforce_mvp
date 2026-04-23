@@ -33,6 +33,19 @@ def build_config(profile: str) -> SimulationConfig:
         emit_when_stationary=False,
     )
 
+    stream_events = EventConfig(
+        emit_interval_seconds_by_type={
+            "fixed_wing_aircraft": 5,
+            "rotary_wing_aircraft": 2,
+            "multirotor_uav": 1,
+            "fixed_wing_uav": 2,
+            "balloon": 10,
+            "bird_flock": 2,
+            "weather_cell": 15,
+        },
+        emit_when_stationary=False,
+    )
+
     base_area = AreaConfig(
         min_lat=51.293,
         max_lat=56.285,
@@ -88,7 +101,7 @@ def build_config(profile: str) -> SimulationConfig:
             ),
             runtime=RuntimeConfig(
                 realtime=True,
-                progress_every_steps=20,
+                progress_every_steps=5,
                 startup_spread_seconds=300,
             ),
             events=base_events,
@@ -97,7 +110,7 @@ def build_config(profile: str) -> SimulationConfig:
     if profile == "load":
         return SimulationConfig(
             seed=42,
-            time=TimeConfig(tick_seconds=1, time_scale=20.0, max_steps=10000),
+            time=TimeConfig(tick_seconds=3, time_scale=50.0, max_steps=10000),
             area=base_area,
             transient=TransientConfig(
                 enabled=True,
@@ -121,5 +134,31 @@ def build_config(profile: str) -> SimulationConfig:
             events=base_events,
         )
 
-    raise ValueError(f"Unknown profile: {profile!r}. Allowed: debug, realtime_demo, load")
+    if profile == "stream":
+        return SimulationConfig(
+            seed=42,
+            time=TimeConfig(tick_seconds=1, time_scale=1.0, max_steps=None),
+            area=base_area,
+            transient=TransientConfig(
+                enabled=True,
+                initial_objects=3,
+                spawn_rate_per_tick=0.02,
+                ttl_seconds_min=30,
+                ttl_seconds_max=300,
+                travel_km_min=3.0,
+                travel_km_max=10.0,
+            ),
+            fleet=FleetConfig(
+                scheduled_traffic=300,
+                unscheduled_traffic=200,
+                restrict_airport_pairs_to_area=False,
+            ),
+            runtime=RuntimeConfig(
+                realtime=True,
+                progress_every_steps=30,
+                startup_spread_seconds=900,
+            ),
+            events=stream_events,
+        )
 
+    raise ValueError(f"Unknown profile: {profile!r}. Allowed: debug, realtime_demo, load, stream")

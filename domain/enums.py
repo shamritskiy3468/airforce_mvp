@@ -75,3 +75,4 @@ class DespawnReason(Enum):
     TRANSIENT_LEFT_AREA = "transient_left_area"
     ROUTE_COMPLETED = "route_completed"
     PLAYBACK_COMPLETED = "playback_completed"
+    MISSION_COMPLETED = "mission_completed"

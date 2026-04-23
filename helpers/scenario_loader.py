@@ -9,6 +9,7 @@ from typing import Iterable
 from domain.air_object import AirObject
 from domain.enums import (
     CooperationStatus,
+    FlightCategory,
     MissionProfile,
     PlatformClass,
     ScenarioBucket,
@@ -111,6 +112,10 @@ class ScenarioLoader:
                     cooperation_status=obj_spec.cooperation_status,
                     route=route,
                     callsign=obj_spec.callsign,
+                    flight_category=obj_spec.flight_category,
+                    origin_label=obj_spec.origin_label,
+                    destination_label=obj_spec.destination_label,
+                    max_lifetime_seconds=obj_spec.max_lifetime_seconds,
                 )
                 initial_position = obj_spec.initial_position or route.origin
                 initial_speed_kmh = obj_spec.initial_speed_kmh
@@ -124,6 +129,7 @@ class ScenarioLoader:
                     mission_profile=obj_spec.mission_profile,
                     truth_affiliation=obj_spec.truth_affiliation,
                     cooperation_status=obj_spec.cooperation_status,
+                    max_lifetime_seconds=obj_spec.max_lifetime_seconds,
                 )
                 initial_position = obj_spec.initial_position
                 initial_speed_kmh = obj_spec.initial_speed_kmh
@@ -170,6 +176,13 @@ class ScenarioLoader:
         return ScenarioObjectSpec(
             object_id=payload.get("object_id"),
             callsign=payload.get("callsign"),
+            flight_category=ScenarioLoader._parse_enum(
+                FlightCategory,
+                payload.get("flight_category", FlightCategory.UNKNOWN.value),
+                field_name="flight_category",
+            ),
+            origin_label=payload.get("origin_label"),
+            destination_label=payload.get("destination_label"),
             scenario_bucket=ScenarioLoader._parse_enum(
                 ScenarioBucket,
                 payload.get("scenario_bucket", ScenarioBucket.UNSCHEDULED_TRAFFIC.value),
@@ -207,6 +220,7 @@ class ScenarioLoader:
             ),
             initial_speed_kmh=payload.get("initial_speed_kmh"),
             initial_heading_deg=payload.get("initial_heading_deg"),
+            max_lifetime_seconds=payload.get("max_lifetime_seconds"),
             default_route_altitude_m=float(payload.get("default_route_altitude_m", 0.0)),
         )
 

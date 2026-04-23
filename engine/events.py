@@ -7,6 +7,8 @@ from typing import Optional
 from domain.enums import (
     CooperationStatus,
     DespawnReason,
+    FlightCategory,
+    FlightState,
     MissionProfile,
     PlatformClass,
     ScenarioBucket,
@@ -14,6 +16,8 @@ from domain.enums import (
     TruthEventType,
     TruthAffiliation,
 )
+
+TRUTH_EVENT_SCHEMA_VERSION = "truth_event_v1"
 
 
 @dataclass(frozen=True)
@@ -32,6 +36,11 @@ class TruthEvent:
     mission_profile: MissionProfile
     truth_affiliation: TruthAffiliation
     cooperation_status: CooperationStatus
+    callsign: Optional[str]
+    flight_category: Optional[FlightCategory]
+    origin_label: Optional[str]
+    destination_label: Optional[str]
+    flight_state: Optional[FlightState]
 
     lat: float
     lon: float
@@ -42,6 +51,8 @@ class TruthEvent:
 
     event_time: datetime.datetime
     ingest_time: datetime.datetime
+    run_id: str
+    schema_version: str
     despawn_reason: Optional[DespawnReason] = None
 
 

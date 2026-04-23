@@ -5,6 +5,7 @@ from typing import Literal, Optional
 
 from .enums import (
     CooperationStatus,
+    FlightCategory,
     MissionProfile,
     PlatformClass,
     ScenarioBucket,
@@ -56,6 +57,9 @@ class TrackSpec:
 class ScenarioObjectSpec:
     object_id: Optional[str] = None
     callsign: Optional[str] = None
+    flight_category: FlightCategory = FlightCategory.UNKNOWN
+    origin_label: Optional[str] = None
+    destination_label: Optional[str] = None
     scenario_bucket: ScenarioBucket = ScenarioBucket.UNSCHEDULED_TRAFFIC
     platform_class: PlatformClass = PlatformClass.UNKNOWN
     mission_profile: MissionProfile = MissionProfile.TRANSIT
@@ -69,6 +73,7 @@ class ScenarioObjectSpec:
     initial_position: Optional[Waypoint] = None
     initial_speed_kmh: Optional[float] = None
     initial_heading_deg: Optional[float] = None
+    max_lifetime_seconds: Optional[int] = None
     default_route_altitude_m: float = 0.0
 
     def validate(self) -> None:

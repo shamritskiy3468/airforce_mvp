@@ -1,6 +1,8 @@
 import datetime
 import argparse
 import random
+from collections import Counter
+from dataclasses import replace
 from pathlib import Path
 
 from domain.flight import Flight
@@ -22,6 +24,20 @@ def main(args):
         Helpers.drop_output_files()
 
     config = build_config(args.profile)
+    if args.tick_seconds is not None or args.time_scale is not None or args.max_steps is not None or args.infinite:
+        config = replace(
+            config,
+            time=replace(
+                config.time,
+                tick_seconds=args.tick_seconds if args.tick_seconds is not None else config.time.tick_seconds,
+                time_scale=args.time_scale if args.time_scale is not None else config.time.time_scale,
+                max_steps=(
+                    None
+                    if args.infinite
+                    else (args.max_steps if args.max_steps is not None else config.time.max_steps)
+                ),
+            ),
+        )
     if config.seed is not None:
         random.seed(config.seed)
 
@@ -113,19 +129,78 @@ def main(args):
         sink=sink,
         start_time=start_time,
     )
+    print(f"run | run_id={engine.run_id} | profile={args.profile}")
 
     stats = None
     interrupted = False
+    progress_state = {
+        "last_step": 0,
+        "last_events": 0,
+        "last_elapsed_real_seconds": 0.0,
+    }
+
+    def format_counter(counter: Counter[str], limit: int = 3, aliases: dict[str, str] | None = None) -> str:
+        if not counter:
+            return "-"
+        parts = []
+        for key, value in counter.most_common(limit):
+            label = aliases.get(key, key) if aliases is not None else key
+            parts.append(f"{label}:{value}")
+        return ",".join(parts)
+
+    def format_rate(value: float) -> str:
+        if value >= 10:
+            return f"{value:.0f}"
+        if value >= 1:
+            return f"{value:.1f}"
+        return f"{value:.2f}"
 
     def progress_log(step: int, total_events: int, elapsed_real_seconds: float, eng: SimulationEngine):
         sim_elapsed_seconds = step * config.time.tick_seconds
         sim_hours = sim_elapsed_seconds / 3600.0
         eps = total_events / elapsed_real_seconds if elapsed_real_seconds > 0 else 0.0
-        print(
-            f"progress | step={step}/{config.time.max_steps} | "
-            f"sim_hours={sim_hours:.2f} | elapsed_real={elapsed_real_seconds:.1f}s | "
-            f"eps={eps:.0f} | active_objects={len(eng.objects)}"
+        step_delta = step - progress_state["last_step"]
+        events_delta = total_events - progress_state["last_events"]
+        elapsed_delta = elapsed_real_seconds - progress_state["last_elapsed_real_seconds"]
+        recent_eps = events_delta / elapsed_delta if elapsed_delta > 0 else 0.0
+        max_steps_label = "inf" if config.time.max_steps is None else str(config.time.max_steps)
+
+        active_objects = []
+        pending_objects = 0
+        for obj in eng.objects:
+            if obj.activation_time is not None and eng.current_time < obj.activation_time:
+                pending_objects += 1
+                continue
+            active_objects.append(obj)
+
+        bucket_counter = Counter(obj.scenario_bucket.value for obj in active_objects)
+        platform_counter = Counter(obj.platform_class.value for obj in active_objects)
+        flight_state_counter = Counter(
+            obj.state.value
+            for obj in active_objects
+            if isinstance(obj, Flight)
         )
+
+        bucket_aliases = {
+            "scheduled_traffic": "sch",
+            "unscheduled_traffic": "uns",
+            "transient_phenomena": "trn",
+        }
+
+        print(
+            f"progress | sim_time={eng.current_time.isoformat()} | "
+            f"step={step}/{max_steps_label} (+{step_delta}) | "
+            f"sim_hours={sim_hours:.2f} | "
+            f"events=+{events_delta}/{total_events} | "
+            f"eps={format_rate(recent_eps)} recent, {format_rate(eps)} avg | "
+            f"world=active:{len(active_objects)} pending:{pending_objects} | "
+            f"buckets={format_counter(bucket_counter, limit=3, aliases=bucket_aliases)} | "
+            f"platforms={format_counter(platform_counter, limit=3)} | "
+            f"flight_states={format_counter(flight_state_counter, limit=3)}"
+        )
+        progress_state["last_step"] = step
+        progress_state["last_events"] = total_events
+        progress_state["last_elapsed_real_seconds"] = elapsed_real_seconds
 
     try:
         if config.runtime.realtime:
@@ -159,19 +234,40 @@ def main(args):
             f"done | steps={stats.steps} | events={stats.events} | "
             f"elapsed={stats.elapsed_real_seconds:.2f}s | eps={stats.events_per_second:.0f} | "
             f"active_objects={len(engine.objects)} | "
+            f"run_id={engine.run_id} | "
             f"avg_lag_ms={stats.avg_step_lag_seconds * 1000:.2f} | "
             f"max_lag_ms={stats.max_step_lag_seconds * 1000:.2f}"
         )
     elif interrupted:
-        print(f"partial_run | active_objects={len(engine.objects)}")
+        print(f"partial_run | active_objects={len(engine.objects)} | run_id={engine.run_id}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--profile",
-        choices=["debug", "realtime_demo", "load"],
+        choices=["debug", "realtime_demo", "load", "stream"],
         default="debug",
         help="Simulation config profile",
+    )
+    parser.add_argument(
+        "--tick-seconds",
+        type=int,
+        help="Override simulation tick size in simulation seconds",
+    )
+    parser.add_argument(
+        "--time-scale",
+        type=float,
+        help="Override realtime scale: 1.0 means 1 real second = 1 simulation second",
+    )
+    parser.add_argument(
+        "--max-steps",
+        type=int,
+        help="Override maximum step count",
+    )
+    parser.add_argument(
+        "--infinite",
+        action="store_true",
+        help="Run indefinitely until interrupted",
     )
     parser.add_argument("--sink",
                         required=True,

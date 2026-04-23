@@ -55,6 +55,8 @@ class JsonlSink(EventSink):
                 d["mission_profile"] = e.mission_profile.value
                 d["truth_affiliation"] = e.truth_affiliation.value
                 d["cooperation_status"] = e.cooperation_status.value
+                d["flight_category"] = e.flight_category.value if e.flight_category else None
+                d["flight_state"] = e.flight_state.value if e.flight_state else None
                 d["speed_source"] = e.speed_source.value if e.speed_source else None
                 d["despawn_reason"] = e.despawn_reason.value if e.despawn_reason else None
                 d["event_time"] = e.event_time.isoformat()

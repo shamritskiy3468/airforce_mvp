@@ -263,6 +263,7 @@ class FlightFactory:
                 cooperation_status=cooperation_status,
                 route=route,
                 callsign=FlightFactory._generate_callsign(prefix="UT"),
+                flight_category=FlightFactory._flight_category_for_unscheduled(platform_class),
             )
 
         return AirObject(
@@ -271,6 +272,10 @@ class FlightFactory:
             mission_profile=mission_profile,
             truth_affiliation=truth_affiliation,
             cooperation_status=cooperation_status,
+            max_lifetime_seconds=FlightFactory._sample_unscheduled_free_lifetime_seconds(
+                platform_class=platform_class,
+                mission_profile=mission_profile,
+            ),
         )
 
     @staticmethod
@@ -324,6 +329,14 @@ class FlightFactory:
             origin_label=origin_label,
             destination_label=destination_label,
         )
+
+    @staticmethod
+    def _flight_category_for_unscheduled(platform_class: PlatformClass) -> FlightCategory:
+        if platform_class == PlatformClass.FIXED_WING_AIRCRAFT:
+            return FlightCategory.GENERAL_AVIATION
+        if platform_class in (PlatformClass.FIXED_WING_UAV, PlatformClass.MULTIROTOR_UAV):
+            return FlightCategory.UTILITY
+        return FlightCategory.UTILITY
 
     @staticmethod
     def sample_object_position(
@@ -512,6 +525,38 @@ class FlightFactory:
         if fraction >= 0.8:
             return max(500.0, cruise_altitude_m * 0.3)
         return cruise_altitude_m
+
+    @staticmethod
+    def _sample_unscheduled_free_lifetime_seconds(
+        platform_class: PlatformClass,
+        mission_profile: MissionProfile,
+    ) -> int:
+        if platform_class == PlatformClass.MULTIROTOR_UAV:
+            if mission_profile == MissionProfile.LOITER:
+                low_minutes, high_minutes = 20, 55
+            else:
+                low_minutes, high_minutes = 15, 40
+        elif platform_class == PlatformClass.FIXED_WING_UAV:
+            if mission_profile == MissionProfile.RECON:
+                low_minutes, high_minutes = 90, 240
+            elif mission_profile == MissionProfile.LOITER:
+                low_minutes, high_minutes = 70, 180
+            else:
+                low_minutes, high_minutes = 60, 150
+        elif platform_class == PlatformClass.ROTARY_WING_AIRCRAFT:
+            if mission_profile == MissionProfile.PATROL:
+                low_minutes, high_minutes = 45, 120
+            else:
+                low_minutes, high_minutes = 35, 90
+        else:
+            if mission_profile == MissionProfile.RECON:
+                low_minutes, high_minutes = 80, 180
+            elif mission_profile == MissionProfile.PATROL:
+                low_minutes, high_minutes = 60, 150
+            else:
+                low_minutes, high_minutes = 50, 120
+
+        return random.randint(low_minutes * 60, high_minutes * 60)
 
     @staticmethod
     def _sample_airport_pair(area: Optional[AreaConfig]) -> tuple[Airport, Airport] | None:

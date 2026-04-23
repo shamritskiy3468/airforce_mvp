@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import random
+import uuid
 from typing import Dict, List, Optional
 
 from domain.air_object import AirObject, Position
@@ -12,7 +13,7 @@ from engine.navigation.base import NavigationPolicy
 from engine.navigation.math import haversine_distance
 
 from .config import SimulationConfig
-from .events import TruthEvent
+from .events import TRUTH_EVENT_SCHEMA_VERSION, TruthEvent
 from .sinks import EventSink
 from .spawner import TransientSpawner
 
@@ -33,11 +34,13 @@ class SimulationEngine:
         navigation_policies: Dict[str, NavigationPolicy],
         sink: EventSink,
         start_time: datetime.datetime,
+        run_id: str | None = None,
     ):
         self.config = config
         self.objects: List[AirObject] = list(objects)
         self.navigation_policies = dict(navigation_policies)
         self.sink = sink
+        self.run_id = run_id or str(uuid.uuid4())
 
         self.current_time = start_time
         self._spawner = TransientSpawner(area=config.area, transient=config.transient)
@@ -219,6 +222,11 @@ class SimulationEngine:
             mission_profile=obj.mission_profile,
             truth_affiliation=obj.truth_affiliation,
             cooperation_status=obj.cooperation_status,
+            callsign=obj.callsign if isinstance(obj, Flight) else None,
+            flight_category=obj.flight_category if isinstance(obj, Flight) else None,
+            origin_label=obj.origin_label if isinstance(obj, Flight) else None,
+            destination_label=obj.destination_label if isinstance(obj, Flight) else None,
+            flight_state=obj.state if isinstance(obj, Flight) else None,
             lat=pos.lat,
             lon=pos.lon,
             altitude=pos.altitude,
@@ -227,6 +235,8 @@ class SimulationEngine:
             speed_source=pos.speed_source,
             event_time=self.current_time,
             ingest_time=ingest_time,
+            run_id=self.run_id,
+            schema_version=TRUTH_EVENT_SCHEMA_VERSION,
             despawn_reason=despawn_reason,
         )
 
@@ -238,6 +248,15 @@ class SimulationEngine:
         )
         if transient_reason is not None:
             return transient_reason
+
+        if (
+            obj.scenario_bucket == ScenarioBucket.UNSCHEDULED_TRAFFIC
+            and not isinstance(obj, Flight)
+            and obj.max_lifetime_seconds is not None
+            and obj.activation_time is not None
+            and self.current_time >= obj.activation_time + datetime.timedelta(seconds=obj.max_lifetime_seconds)
+        ):
+            return DespawnReason.MISSION_COMPLETED
 
         if isinstance(obj, Flight) and obj.state == FlightState.FINISHED:
             return DespawnReason.ROUTE_COMPLETED
