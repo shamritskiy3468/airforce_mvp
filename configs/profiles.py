@@ -9,6 +9,7 @@ from engine.config import (
     TimeConfig,
     TransientConfig,
 )
+from .regions import EUROPE_CIS_AREA
 
 
 def build_config(profile: str) -> SimulationConfig:
@@ -46,12 +47,7 @@ def build_config(profile: str) -> SimulationConfig:
         emit_when_stationary=False,
     )
 
-    base_area = AreaConfig(
-        min_lat=51.293,
-        max_lat=56.285,
-        min_lon=23.140,
-        max_lon=33.313,
-    )
+    base_area = EUROPE_CIS_AREA
 
     if profile == "debug":
         return SimulationConfig(

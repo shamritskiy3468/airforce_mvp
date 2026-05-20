@@ -9,6 +9,7 @@ from engine.navigation.random_policy import RandomNavigationPolicy
 from engine.navigation.route_policy import RouteNavigationPolicy
 from engine.runtime import run_fast
 from helpers.helpers import Helpers
+from configs.regions import EUROPE_CIS_AREA
 
 def main(args):
     # Бенчмарк "потолка" CPU: без спавна шумов, без печати, без записи в файл.
@@ -19,7 +20,7 @@ def main(args):
             time_scale=1.0,
             max_steps=0,
         ),
-        area=AreaConfig(min_lat=53.0, max_lat=55.0, min_lon=27.0, max_lon=30.0),
+        area=EUROPE_CIS_AREA,
         transient=TransientConfig(enabled=False, initial_objects=0, spawn_rate_per_tick=0.0),
         fleet=FleetConfig(scheduled_traffic=20, unscheduled_traffic=200),
         runtime=RuntimeConfig(realtime=False),

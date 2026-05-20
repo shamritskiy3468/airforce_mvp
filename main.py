@@ -222,6 +222,7 @@ def main(args):
         interrupted = True
         print("\ninterrupted | exporting partial waypoints from generated events")
     finally:
+        sink.close()
         if (
             args.store_dots
             and json_sink_filename is not None
@@ -271,7 +272,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--sink",
                         required=True,
-                        choices=["json", "console", "null"],
+                        choices=["json", "console", "kafka", "null"],
                         help="Output sink type")
     parser.add_argument(
         "--scenario",

@@ -1,9 +1,10 @@
 import json
 import csv
 import datetime
+import os
 from pathlib import Path
 from typing import Union, Dict, List
-from engine.sinks import JsonSink, NullSink, ConsoleSink
+from engine.sinks import JsonSink, NullSink, ConsoleSink, KafkaSink
 
 
 class Helpers:
@@ -85,8 +86,28 @@ class Helpers:
             return JsonSink(path=json_sink_filename)
         elif sink_type == "console":
             return ConsoleSink()
+        elif sink_type == "kafka":
+            bootstrap_servers = [
+                item.strip()
+                for item in os.getenv(
+                    "SIM_KAFKA_BOOTSTRAP_SERVERS",
+                    "localhost:9094",
+                ).split(",")
+                if item.strip()
+            ]
+            topic = os.getenv("SIM_KAFKA_TOPIC", "airforce.truth.raw.v1")
+            client_id = os.getenv("SIM_KAFKA_CLIENT_ID", "airforce-simulator")
+            return KafkaSink(
+                bootstrap_servers=bootstrap_servers,
+                topic=topic,
+                client_id=client_id,
+                acks=os.getenv("SIM_KAFKA_ACKS", "all"),
+                linger_ms=int(os.getenv("SIM_KAFKA_LINGER_MS", "20")),
+                batch_size=int(os.getenv("SIM_KAFKA_BATCH_SIZE", "131072")),
+                compression_type=os.getenv("SIM_KAFKA_COMPRESSION_TYPE", "gzip"),
+            )
         elif sink_type == "null":
             return NullSink()
         else:
             raise ValueError(f"Unknown sink type: {sink_type!r}. "
-                            "Allowed: json, console, null")
+                            "Allowed: json, console, kafka, null")
