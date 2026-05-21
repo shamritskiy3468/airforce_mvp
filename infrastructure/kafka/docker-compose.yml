@@ -93,5 +93,26 @@ services:
       kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic airforce.truth.dlq.v1 --partitions 3 --replication-factor 1
       "
 
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: airforce-clickhouse
+    ports:
+      - "8123:8123"   # HTTP
+      - "9000:9000"   # Native TCP
+    environment:
+      CLICKHOUSE_DB: airforce
+      CLICKHOUSE_USER: airforce
+      CLICKHOUSE_PASSWORD: airforce_pass
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+
 volumes:
   kafka_data:
+  clickhouse_data:
+  clickhouse_logs:
