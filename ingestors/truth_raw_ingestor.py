@@ -134,6 +134,29 @@ class ClickHouseWriter:
         except error.URLError as exc:
             raise RuntimeError(f"ClickHouse connection error: {exc.reason}") from exc
 
+    def ensure_target_table_exists(self) -> None:
+        query = f"EXISTS TABLE {self._database}.{self._table}"
+        req = request.Request(
+            url=f"{self._base_url}/?query={parse.quote(query, safe='')}",
+            method="GET",
+            headers={
+                "Authorization": self._auth_header,
+            },
+        )
+        try:
+            with request.urlopen(req, timeout=10) as resp:
+                body = resp.read().decode("utf-8", errors="replace").strip()
+        except error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"ClickHouse HTTP {exc.code}: {body}") from exc
+        except error.URLError as exc:
+            raise RuntimeError(f"ClickHouse connection error: {exc.reason}") from exc
+
+        if body != "1":
+            raise RuntimeError(
+                f"ClickHouse target table does not exist: {self._database}.{self._table}"
+            )
+
 
 class DlqProducer:
     def __init__(self, bootstrap_servers: list[str], topic: str):
@@ -274,8 +297,10 @@ def main() -> int:
         user=args.clickhouse_user,
         password=args.clickhouse_password,
     )
+    writer.ensure_target_table_exists()
 
     should_stop = False
+    failed = False
 
     def _handle_stop(signum, frame):
         nonlocal should_stop
@@ -350,8 +375,11 @@ def main() -> int:
             idle_seconds = time.monotonic() - last_flush_ts
             if pending_rows and (not any_message) and idle_seconds >= args.idle_flush_seconds:
                 flush_batch()
+    except Exception:
+        failed = True
+        raise
     finally:
-        if pending_rows:
+        if pending_rows and not failed:
             flush_batch()
         dlq.close()
         consumer.close()
