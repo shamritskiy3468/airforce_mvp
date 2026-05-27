@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS airforce.truth_events_raw
     kafka_topic LowCardinality(String) DEFAULT '',
     kafka_partition UInt16 DEFAULT 0,
     kafka_offset UInt64 DEFAULT 0,
+    warehouse_ingested_at DateTime64(3, 'UTC') DEFAULT now64(3),
 
     raw_payload String DEFAULT '' CODEC(ZSTD(3))
 )

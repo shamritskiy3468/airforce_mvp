@@ -133,7 +133,10 @@ services:
       until clickhouse-client --host clickhouse --user airforce --password airforce_pass --query 'SELECT 1'; do
         sleep 2;
       done &&
-      clickhouse-client --host clickhouse --user airforce --password airforce_pass --multiquery < /migrations/001_create_truth_events_raw.sql
+      for file in /migrations/*.sql; do
+        echo \"applying migration: $$file\";
+        clickhouse-client --host clickhouse --user airforce --password airforce_pass --multiquery < \"$$file\";
+      done
       "
     volumes:
       - ../../migrations/clickhouse:/migrations:ro
