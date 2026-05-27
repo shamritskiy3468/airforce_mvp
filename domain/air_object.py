@@ -35,7 +35,7 @@ class AirObject:
     activation_time: Optional[datetime.datetime] = None
     max_lifetime_seconds: Optional[int] = None
     positions: List[Position] = field(default_factory=list)
-    max_history: int = 300
+    max_history: int = 15
 
     def __post_init__(self):
         if self.kinematics is None:

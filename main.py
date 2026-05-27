@@ -15,7 +15,7 @@ from engine.engine import SimulationEngine
 from engine.navigation.playback_policy import PlaybackNavigationPolicy
 from engine.navigation.route_policy import RouteNavigationPolicy
 from engine.navigation.random_policy import RandomNavigationPolicy
-from engine.sinks import JsonlSink
+from engine.sinks import JsonSink
 from engine.runtime import run_fast, run_realtime
 
 
@@ -117,10 +117,10 @@ def main(args):
             navigation_policies[obj.object_id] = RandomNavigationPolicy(area=config.area)
 
     sink = Helpers.create_sink(args.sink)
-    if args.store_dots and not isinstance(sink, JsonlSink):
+    if args.store_dots and not isinstance(sink, JsonSink):
         raise ValueError("--store-dots requires --sink json")
 
-    json_sink_filename = sink._path if isinstance(sink, JsonlSink) else None
+    json_sink_filename = sink.path if isinstance(sink, JsonSink) else None
 
     engine = SimulationEngine(
         config=config,
@@ -222,6 +222,7 @@ def main(args):
         interrupted = True
         print("\ninterrupted | exporting partial waypoints from generated events")
     finally:
+        sink.close()
         if (
             args.store_dots
             and json_sink_filename is not None
@@ -271,7 +272,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--sink",
                         required=True,
-                        choices=["json", "console", "null"],
+                        choices=["json", "console", "kafka", "null"],
                         help="Output sink type")
     parser.add_argument(
         "--scenario",
