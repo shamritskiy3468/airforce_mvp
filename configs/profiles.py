@@ -138,15 +138,15 @@ def build_config(profile: str) -> SimulationConfig:
             transient=TransientConfig(
                 enabled=True,
                 initial_objects=3,
-                spawn_rate_per_tick=0.02,
+                spawn_rate_per_tick=0.035,
                 ttl_seconds_min=30,
                 ttl_seconds_max=300,
                 travel_km_min=3.0,
-                travel_km_max=10.0,
+                travel_km_max=13.0,
             ),
             fleet=FleetConfig(
-                scheduled_traffic=300,
-                unscheduled_traffic=200,
+                scheduled_traffic=400,
+                unscheduled_traffic=230,
                 restrict_airport_pairs_to_area=False,
             ),
             runtime=RuntimeConfig(

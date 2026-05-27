@@ -10,3 +10,12 @@ maps/
 infrastructure/*
 infrastructure/kafka/compose.md
 infrastructure/kafka/README.md
+.cursor
+.codex
+.claude
+graph-memory/
+graphify-out/
+AGENT*
+.graphifyignore
+scripts/
+example.md

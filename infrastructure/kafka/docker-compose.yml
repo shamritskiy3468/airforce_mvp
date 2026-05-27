@@ -114,6 +114,30 @@ services:
       nofile:
         soft: 262144
         hard: 262144
+    healthcheck:
+      test: ["CMD-SHELL", "clickhouse-client --user airforce --password airforce_pass --query 'SELECT 1' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  # -- one shot service for inintializing clickhouse schema, will run once after clickhouse is up and then exit
+  clickhouse-init:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: airforce-clickhouse-init
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    entrypoint: ["/bin/bash", "-c"]
+    command: >
+      "
+      until clickhouse-client --host clickhouse --user airforce --password airforce_pass --query 'SELECT 1'; do
+        sleep 2;
+      done &&
+      clickhouse-client --host clickhouse --user airforce --password airforce_pass --multiquery < /migrations/001_create_truth_events_raw.sql
+      "
+    volumes:
+      - ../../migrations/clickhouse:/migrations:ro
+    restart: "no"
 
   grafana:
     image: grafana/grafana-oss:11.1.0
