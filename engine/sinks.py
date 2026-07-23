@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from abc import ABC, abstractmethod
 from dataclasses import asdict
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterable
 
@@ -32,6 +33,17 @@ def truth_event_to_dict(e: TruthEvent) -> dict:
     d["despawn_reason"] = e.despawn_reason.value if e.despawn_reason else None
     d["event_time"] = e.event_time.isoformat()
     d["ingest_time"] = e.ingest_time.isoformat()
+    return d
+
+
+def _datetime_to_millis(value: datetime) -> int:
+    return int(value.astimezone(timezone.utc).timestamp() * 1000)
+
+
+def truth_event_to_avro_dict(e: TruthEvent) -> dict:
+    d = truth_event_to_dict(e)
+    d["event_time"] = _datetime_to_millis(e.event_time)
+    d["ingest_time"] = _datetime_to_millis(e.ingest_time)
     return d
 
 
@@ -122,3 +134,62 @@ class KafkaSink(EventSink):
     def close(self) -> None:
         self._producer.flush(timeout=10.0)
         self._producer.close()
+
+
+class KafkaAvroSink(EventSink):
+    def __init__(
+        self,
+        bootstrap_servers: list[str],
+        topic: str,
+        schema_registry_url: str,
+        schema_path: str,
+        client_id: str = "airforce-simulator-avro",
+        acks: str = "all",
+        linger_ms: int = 20,
+        compression_type: str = "gzip",
+    ):
+        try:
+            from confluent_kafka import SerializingProducer
+            from confluent_kafka.schema_registry import SchemaRegistryClient
+            from confluent_kafka.schema_registry.avro import AvroSerializer
+            from confluent_kafka.serialization import StringSerializer
+        except ImportError as exc:
+            raise RuntimeError(
+                "Kafka Avro sink requires dependency 'confluent-kafka[avro]'. "
+                "Install with: pip install 'confluent-kafka[avro]'"
+            ) from exc
+
+        schema_str = Path(schema_path).read_text(encoding="utf-8")
+        schema_registry = SchemaRegistryClient({"url": schema_registry_url})
+        avro_serializer = AvroSerializer(
+            schema_registry_client=schema_registry,
+            schema_str=schema_str,
+        )
+
+        self._topic = topic
+        self._producer = SerializingProducer(
+            {
+                "bootstrap.servers": ",".join(bootstrap_servers),
+                "client.id": client_id,
+                "acks": acks,
+                "linger.ms": linger_ms,
+                "compression.type": compression_type,
+                "key.serializer": StringSerializer("utf_8"),
+                "value.serializer": avro_serializer,
+            }
+        )
+
+    def publish(self, events: Iterable[TruthEvent]) -> None:
+        sent = 0
+        for e in events:
+            self._producer.produce(
+                topic=self._topic,
+                key=e.object_id,
+                value=truth_event_to_avro_dict(e),
+            )
+            sent += 1
+        if sent > 0:
+            self._producer.flush(timeout=10.0)
+
+    def close(self) -> None:
+        self._producer.flush(timeout=10.0)

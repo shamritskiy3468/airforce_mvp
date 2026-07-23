@@ -23,18 +23,29 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--topic",
-        default="airforce.truth.raw.v1",
+        default="airforce.truth.raw.avro.v1",
         help="Source Kafka topic with truth events.",
     )
     parser.add_argument(
         "--group-id",
-        default="airforce-truth-raw-ingestor-v1",
+        default="airforce-truth-raw-ingestor-avro-v1",
         help="Kafka consumer group id.",
     )
     parser.add_argument(
         "--dlq-topic",
         default="airforce.truth.dlq.v1",
         help="DLQ topic for malformed messages.",
+    )
+    parser.add_argument(
+        "--message-format",
+        choices=["auto", "json", "avro"],
+        default="avro",
+        help="Kafka value format. In auto mode, topics containing '.avro.' are treated as Avro.",
+    )
+    parser.add_argument(
+        "--schema-registry-url",
+        default="http://localhost:8081",
+        help="Schema Registry URL for Avro messages.",
     )
     parser.add_argument(
         "--clickhouse-url",
@@ -53,12 +64,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--clickhouse-user",
-        default="default",
+        default="airforce",
         help="ClickHouse HTTP user.",
     )
     parser.add_argument(
         "--clickhouse-password",
-        default="",
+        default="airforce_pass",
         help="ClickHouse HTTP password.",
     )
     parser.add_argument(
@@ -190,15 +201,60 @@ class DlqProducer:
 def normalize_datetime(raw: str | None) -> str | None:
     if raw is None:
         return None
-    dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    if isinstance(raw, datetime):
+        dt = raw
+    elif isinstance(raw, (int, float)):
+        dt = datetime.fromtimestamp(raw / 1000, tz=timezone.utc)
+    else:
+        dt = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     dt = dt.astimezone(timezone.utc)
     return dt.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
 
 
-def normalize_message(message) -> NormalizedMessage:
+def build_avro_deserializer(schema_registry_url: str):
+    try:
+        from confluent_kafka.schema_registry import SchemaRegistryClient
+        from confluent_kafka.schema_registry.avro import AvroDeserializer
+    except ImportError as exc:
+        raise RuntimeError(
+            "Avro ingestion requires dependency 'confluent-kafka[avro]'. "
+            "Install with: pip install 'confluent-kafka[avro]'"
+        ) from exc
+
+    schema_registry = SchemaRegistryClient({"url": schema_registry_url})
+    return AvroDeserializer(schema_registry)
+
+
+def infer_message_format(topic: str, requested_format: str) -> str:
+    topic_looks_avro = ".avro." in topic or topic.endswith(".avro")
+    if requested_format == "auto":
+        return "avro" if topic_looks_avro else "json"
+    if requested_format == "json" and topic_looks_avro:
+        raise ValueError(
+            f"Topic {topic!r} looks like an Avro topic, but --message-format=json was requested. "
+            "Use --message-format=avro or leave the default --message-format=auto."
+        )
+    return requested_format
+
+
+def decode_message_payload(message, message_format: str, avro_deserializer=None) -> tuple[dict[str, Any], str]:
     raw_value = message.value
+    if message_format == "avro":
+        if avro_deserializer is None:
+            raise ValueError("avro_deserializer is required for Avro messages")
+        from confluent_kafka.serialization import MessageField, SerializationContext
+
+        payload = avro_deserializer(
+            raw_value,
+            SerializationContext(message.topic, MessageField.VALUE),
+        )
+        if payload is None:
+            raise ValueError("Avro payload is empty")
+        raw_payload = json.dumps(payload, ensure_ascii=False, default=str)
+        return payload, raw_payload
+
     if isinstance(raw_value, bytes):
         raw_payload = raw_value.decode("utf-8")
     elif isinstance(raw_value, str):
@@ -207,6 +263,25 @@ def normalize_message(message) -> NormalizedMessage:
         raw_payload = json.dumps(raw_value, ensure_ascii=False)
 
     payload = json.loads(raw_payload)
+    return payload, raw_payload
+
+
+def raw_payload_for_dlq(raw_value, message_format: str) -> tuple[str, str]:
+    if message_format == "avro":
+        if isinstance(raw_value, bytes):
+            return base64.b64encode(raw_value).decode("ascii"), "base64"
+        return str(raw_value), "text"
+    if isinstance(raw_value, bytes):
+        return raw_value.decode("utf-8", errors="replace"), "utf-8"
+    return str(raw_value), "text"
+
+
+def normalize_message(message, message_format: str, avro_deserializer=None) -> NormalizedMessage:
+    payload, raw_payload = decode_message_payload(
+        message,
+        message_format=message_format,
+        avro_deserializer=avro_deserializer,
+    )
 
     row = {
         "event_time": normalize_datetime(payload.get("event_time")),
@@ -265,6 +340,7 @@ def build_dlq_envelope(message, raw_payload: str, reason: str) -> dict[str, Any]
         ),
         "reason": reason,
         "payload": raw_payload,
+        "payload_encoding": "utf-8",
     }
 
 
@@ -280,6 +356,11 @@ def main() -> int:
         ) from exc
 
     bootstrap_servers = [item.strip() for item in args.bootstrap_servers.split(",") if item.strip()]
+    message_format = infer_message_format(args.topic, args.message_format)
+    print(
+        f"startup | topic={args.topic} | group_id={args.group_id} | "
+        f"message_format={message_format} | bootstrap_servers={','.join(bootstrap_servers)}"
+    )
     consumer = KafkaConsumer(
         args.topic,
         bootstrap_servers=bootstrap_servers,
@@ -290,6 +371,11 @@ def main() -> int:
         value_deserializer=lambda payload: payload,
     )
     dlq = DlqProducer(bootstrap_servers=bootstrap_servers, topic=args.dlq_topic)
+    avro_deserializer = (
+        build_avro_deserializer(args.schema_registry_url)
+        if message_format == "avro"
+        else None
+    )
     writer = ClickHouseWriter(
         base_url=args.clickhouse_url,
         database=args.clickhouse_database,
@@ -323,16 +409,31 @@ def main() -> int:
             offsets[tp] = OffsetAndMetadata(message.offset + 1, None, -1)
         return offsets
 
+    def format_partition_offsets(messages) -> str:
+        if not messages:
+            return "-"
+        latest_offsets_by_partition = {}
+        for message in messages:
+            latest_offsets_by_partition[message.partition] = max(
+                latest_offsets_by_partition.get(message.partition, -1),
+                message.offset,
+            )
+        return ",".join(
+            f"p{partition}:{offset}"
+            for partition, offset in sorted(latest_offsets_by_partition.items())
+        )
+
     def flush_batch() -> None:
         nonlocal pending_rows, pending_messages, last_flush_ts, inserted_rows
         if not pending_rows:
             return
+        partition_offsets = format_partition_offsets(pending_messages)
         writer.insert_rows(pending_rows)
         consumer.commit(offsets=build_commit_offsets(pending_messages))
         inserted_rows += len(pending_rows)
         print(
             f"flush | inserted={len(pending_rows)} | total_inserted={inserted_rows} | "
-            f"last_offset={pending_messages[-1].offset}"
+            f"partition_offsets={partition_offsets}"
         )
         pending_rows = []
         pending_messages = []
@@ -347,16 +448,20 @@ def main() -> int:
                 any_message = any_message or bool(messages)
                 for message in messages:
                     try:
-                        normalized = normalize_message(message)
+                        normalized = normalize_message(
+                            message,
+                            message_format=message_format,
+                            avro_deserializer=avro_deserializer,
+                        )
                     except Exception as exc:
                         if pending_rows:
                             flush_batch()
-                        raw_payload = (
-                            message.value.decode("utf-8", errors="replace")
-                            if isinstance(message.value, bytes)
-                            else str(message.value)
+                        raw_payload, payload_encoding = raw_payload_for_dlq(
+                            message.value,
+                            message_format=message_format,
                         )
                         envelope = build_dlq_envelope(message, raw_payload=raw_payload, reason=str(exc))
+                        envelope["payload_encoding"] = payload_encoding
                         dlq.publish(envelope, key=str(message.key) if message.key is not None else None)
                         tp = TopicPartition(message.topic, message.partition)
                         consumer.commit(offsets={tp: OffsetAndMetadata(message.offset + 1, None, -1)})

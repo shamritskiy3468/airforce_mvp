@@ -7,7 +7,9 @@ helpers/moving_test.py
 helpers/belarus_map.png
 .DS_Store
 maps/
-infrastructure/*
+infrastructure/clickhouse/
+infrastructure/grafana/
+infrastructure/minio/
 infrastructure/kafka/compose.md
 infrastructure/kafka/README.md
 .cursor
@@ -17,5 +19,4 @@ graph-memory/
 graphify-out/
 AGENT*
 .graphifyignore
-scripts/
 example.md

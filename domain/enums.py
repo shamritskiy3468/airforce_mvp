@@ -59,7 +59,7 @@ class FlightState(Enum):
     FINISHED = "finished"
 
 class SpeedSource(Enum):
-    RADAR = "radar"           # скорость пришла от радара (мы ей доверяем)
+    RADAR = "radar"           # legacy label for measured speed source in truth events
     CALCULATED = "calculated" # скорость рассчитана по координатам
 
 

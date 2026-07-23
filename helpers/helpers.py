@@ -4,7 +4,7 @@ import datetime
 import os
 from pathlib import Path
 from typing import Union, Dict, List
-from engine.sinks import JsonSink, NullSink, ConsoleSink, KafkaSink
+from engine.sinks import JsonSink, NullSink, ConsoleSink, KafkaSink, KafkaAvroSink
 
 
 class Helpers:
@@ -106,8 +106,32 @@ class Helpers:
                 batch_size=int(os.getenv("SIM_KAFKA_BATCH_SIZE", "131072")),
                 compression_type=os.getenv("SIM_KAFKA_COMPRESSION_TYPE", "gzip"),
             )
+        elif sink_type == "kafka-avro":
+            bootstrap_servers = [
+                item.strip()
+                for item in os.getenv(
+                    "SIM_KAFKA_BOOTSTRAP_SERVERS",
+                    "localhost:9094",
+                ).split(",")
+                if item.strip()
+            ]
+            topic = os.getenv("SIM_KAFKA_TOPIC", "airforce.truth.raw.avro.v1")
+            client_id = os.getenv("SIM_KAFKA_CLIENT_ID", "airforce-simulator-avro")
+            return KafkaAvroSink(
+                bootstrap_servers=bootstrap_servers,
+                topic=topic,
+                schema_registry_url=os.getenv("SIM_SCHEMA_REGISTRY_URL", "http://localhost:8081"),
+                schema_path=os.getenv(
+                    "SIM_AVRO_SCHEMA_PATH",
+                    "schemas/avro/truth_event_v1.avsc",
+                ),
+                client_id=client_id,
+                acks=os.getenv("SIM_KAFKA_ACKS", "all"),
+                linger_ms=int(os.getenv("SIM_KAFKA_LINGER_MS", "20")),
+                compression_type=os.getenv("SIM_KAFKA_COMPRESSION_TYPE", "gzip"),
+            )
         elif sink_type == "null":
             return NullSink()
         else:
             raise ValueError(f"Unknown sink type: {sink_type!r}. "
-                            "Allowed: json, console, kafka, null")
+                            "Allowed: json, console, kafka, kafka-avro, null")

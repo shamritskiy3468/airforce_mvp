@@ -1,0 +1,37 @@
+{
+  "type": "record",
+  "name": "TruthEvent",
+  "namespace": "airforce.truth",
+  "doc": "Canonical truth-layer airspace event emitted by the simulator.",
+  "fields": [
+    {"name": "event_type", "type": "string"},
+    {"name": "object_id", "type": "string"},
+    {"name": "scenario_bucket", "type": "string"},
+    {"name": "platform_class", "type": "string"},
+    {"name": "mission_profile", "type": "string"},
+    {"name": "truth_affiliation", "type": "string"},
+    {"name": "cooperation_status", "type": "string"},
+    {"name": "callsign", "type": ["null", "string"], "default": null},
+    {"name": "flight_category", "type": ["null", "string"], "default": null},
+    {"name": "origin_label", "type": ["null", "string"], "default": null},
+    {"name": "destination_label", "type": ["null", "string"], "default": null},
+    {"name": "flight_state", "type": ["null", "string"], "default": null},
+    {"name": "lat", "type": "double"},
+    {"name": "lon", "type": "double"},
+    {"name": "altitude", "type": "double"},
+    {"name": "heading", "type": ["null", "double"], "default": null},
+    {"name": "speed", "type": ["null", "double"], "default": null},
+    {"name": "speed_source", "type": ["null", "string"], "default": null},
+    {
+      "name": "event_time",
+      "type": {"type": "long", "logicalType": "timestamp-millis"}
+    },
+    {
+      "name": "ingest_time",
+      "type": {"type": "long", "logicalType": "timestamp-millis"}
+    },
+    {"name": "run_id", "type": "string"},
+    {"name": "schema_version", "type": "string", "default": "truth_event_v1"},
+    {"name": "despawn_reason", "type": ["null", "string"], "default": null}
+  ]
+}

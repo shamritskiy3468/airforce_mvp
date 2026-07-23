@@ -35,12 +35,14 @@ class SimulationEngine:
         sink: EventSink,
         start_time: datetime.datetime,
         run_id: str | None = None,
+        object_id_prefix: str = "",
     ):
         self.config = config
         self.objects: List[AirObject] = list(objects)
         self.navigation_policies = dict(navigation_policies)
         self.sink = sink
         self.run_id = run_id or str(uuid.uuid4())
+        self.object_id_prefix = object_id_prefix
 
         self.current_time = start_time
         self._spawner = TransientSpawner(area=config.area, transient=config.transient)
@@ -235,7 +237,7 @@ class SimulationEngine:
     ) -> TruthEvent:
         return TruthEvent(
             event_type=event_type,
-            object_id=obj.object_id,
+            object_id=f"{self.object_id_prefix}{obj.object_id}",
             scenario_bucket=obj.scenario_bucket,
             platform_class=obj.platform_class,
             mission_profile=obj.mission_profile,

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Airforce Replay</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <aside class="panel">
+        <div class="brand">
+          <div class="brand-mark"></div>
+          <div>
+            <h1>Airspace Replay</h1>
+            <p>ClickHouse truth events</p>
+          </div>
+        </div>
+
+        <label>
+          Run
+          <select id="runSelect"></select>
+        </label>
+
+        <label>
+          From
+          <input id="fromInput" type="datetime-local" step="1" />
+        </label>
+
+        <label>
+          To
+          <input id="toInput" type="datetime-local" step="1" />
+        </label>
+
+        <div class="row">
+          <label>
+            Limit
+            <input id="limitInput" type="number" min="1" max="200000" value="50000" />
+          </label>
+          <label>
+            Speed
+            <select id="speedSelect">
+              <option value="1">1x</option>
+              <option value="5">5x</option>
+              <option value="20" selected>20x</option>
+              <option value="60">60x</option>
+              <option value="300">300x</option>
+            </select>
+          </label>
+        </div>
+
+        <label>
+          Track points
+          <input id="trackPointsInput" type="number" min="1" max="500" value="25" />
+        </label>
+
+        <div class="actions">
+          <button id="loadBtn">Load</button>
+          <button id="playBtn" disabled>Play</button>
+          <button id="resetBtn" disabled>Reset</button>
+          <button id="fitBtn" disabled>Fit</button>
+        </div>
+
+        <input id="timeline" type="range" min="0" max="0" value="0" disabled />
+
+        <div class="stats">
+          <div><span id="clock">-</span><small>simulation time</small></div>
+          <div><span id="eventCount">0</span><small>events</small></div>
+          <div><span id="activeCount">0</span><small>active objects</small></div>
+        </div>
+
+        <section class="details">
+          <h2>Selected object</h2>
+          <pre id="objectDetails">No object selected</pre>
+        </section>
+
+        <p id="status" class="status">Loading runs...</p>
+      </aside>
+
+      <section class="map-wrap">
+        <div id="map"></div>
+        <div class="legend">
+          <span><i class="civilian"></i> civilian</span>
+          <span><i class="friendly"></i> friendly</span>
+          <span><i class="neutral"></i> neutral</span>
+          <span><i class="adversary"></i> adversary</span>
+        </div>
+      </section>
+    </main>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    ></script>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

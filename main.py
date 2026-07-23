@@ -24,9 +24,16 @@ def main(args):
         Helpers.drop_output_files()
 
     config = build_config(args.profile)
-    if args.tick_seconds is not None or args.time_scale is not None or args.max_steps is not None or args.infinite:
+    if (
+        args.tick_seconds is not None
+        or args.time_scale is not None
+        or args.max_steps is not None
+        or args.infinite
+        or args.seed is not None
+    ):
         config = replace(
             config,
+            seed=args.seed if args.seed is not None else config.seed,
             time=replace(
                 config.time,
                 tick_seconds=args.tick_seconds if args.tick_seconds is not None else config.time.tick_seconds,
@@ -128,8 +135,14 @@ def main(args):
         navigation_policies=navigation_policies,
         sink=sink,
         start_time=start_time,
+        run_id=args.run_id,
+        object_id_prefix=args.object_id_prefix,
     )
-    print(f"run | run_id={engine.run_id} | profile={args.profile}")
+    print(
+        f"run | run_id={engine.run_id} | profile={args.profile} | "
+        f"seed={config.seed} | producer_id={args.producer_id or '-'} | "
+        f"region_id={args.region_id or '-'} | object_id_prefix={args.object_id_prefix or '-'}"
+    )
 
     stats = None
     interrupted = False
@@ -246,7 +259,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--profile",
-        choices=["debug", "realtime_demo", "load", "stream"],
+        choices=["debug", "realtime_demo", "load", "stream", "stream_shard"],
         default="debug",
         help="Simulation config profile",
     )
@@ -266,13 +279,35 @@ if __name__ == "__main__":
         help="Override maximum step count",
     )
     parser.add_argument(
+        "--seed",
+        type=int,
+        help="Override random seed for this generator process",
+    )
+    parser.add_argument(
+        "--run-id",
+        help="Override run_id. Clustered generators can share one run_id.",
+    )
+    parser.add_argument(
+        "--object-id-prefix",
+        default="",
+        help="Prefix added to emitted object_id values, useful for producer clusters.",
+    )
+    parser.add_argument(
+        "--producer-id",
+        help="Human-readable producer id for logs/orchestration.",
+    )
+    parser.add_argument(
+        "--region-id",
+        help="Human-readable region/shard id for logs/orchestration.",
+    )
+    parser.add_argument(
         "--infinite",
         action="store_true",
         help="Run indefinitely until interrupted",
     )
     parser.add_argument("--sink",
                         required=True,
-                        choices=["json", "console", "kafka", "null"],
+                        choices=["json", "console", "kafka", "kafka-avro", "null"],
                         help="Output sink type")
     parser.add_argument(
         "--scenario",

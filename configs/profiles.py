@@ -157,4 +157,35 @@ def build_config(profile: str) -> SimulationConfig:
             events=stream_events,
         )
 
-    raise ValueError(f"Unknown profile: {profile!r}. Allowed: debug, realtime_demo, load, stream")
+    if profile == "stream_shard":
+        # Smaller world per process — use with scripts/run_generator_cluster.sh
+        return SimulationConfig(
+            seed=42,
+            time=TimeConfig(tick_seconds=1, time_scale=1.0, max_steps=None),
+            area=base_area,
+            transient=TransientConfig(
+                enabled=True,
+                initial_objects=2,
+                spawn_rate_per_tick=0.02,
+                ttl_seconds_min=30,
+                ttl_seconds_max=300,
+                travel_km_min=3.0,
+                travel_km_max=13.0,
+            ),
+            fleet=FleetConfig(
+                scheduled_traffic=80,
+                unscheduled_traffic=50,
+                restrict_airport_pairs_to_area=False,
+            ),
+            runtime=RuntimeConfig(
+                realtime=True,
+                progress_every_steps=30,
+                startup_spread_seconds=300,
+            ),
+            events=stream_events,
+        )
+
+    raise ValueError(
+        f"Unknown profile: {profile!r}. "
+        "Allowed: debug, realtime_demo, load, stream, stream_shard"
+    )

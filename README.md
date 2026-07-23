@@ -1,94 +1,68 @@
-# ✈️ Airspace Simulation & Radar Observation System
+# Airspace Truth Simulation & Data Pipeline
 
 ## Overview
 
-This project is a high‑fidelity simulation of airspace activity within any selected geographic area. Its primary purpose is to emulate the behavior of real‑world radar‑based airspace surveillance systems and provide a continuous, realistic stream of detection events.
+Local **truth-layer** airspace simulator and data-engineering pipeline. The system generates realistic air-object movement (flights, UAVs, transients), emits canonical `TruthEvent` logs, and streams them through Kafka into ClickHouse for analytics and map replay.
 
-The system models both the **“truth layer”** (actual aircraft positions and movements) and the **“radar layer”** (imperfect observations produced by multiple independent radar stations). The result is a dynamic environment suitable for testing tracking algorithms, fusion logic, and real‑time airspace monitoring workflows.
-
----
-
-## 🎯 Project Goals
-
-The simulation aims to reproduce the essential characteristics of real radar‑based airspace monitoring:
-
-- Continuous 24/7 scanning of the airspace  
-- Multiple radar stations operating simultaneously  
-- Realistic imperfections and inconsistencies in observations  
-- Real‑time event streaming and processing  
-- End‑to‑end pipeline from raw radar hits to fused air picture  
+**Scope:** simulation → event log → Kafka → ClickHouse → Grafana / replay.  
+**Out of scope:** radar observation layer, sensor fusion, tracking algorithms.
 
 ---
 
-## 🛰️ Radar Layer (Observation Simulation)
+## What it does
 
-Each of the **N radar stations** performs a continuous 360° scan of the airspace. For every detected aircraft, a radar produces:
-
-- Range (distance / coordinates)  
-- Altitude  
-- Velocity (computed as Δposition over time T)
-
-To mimic real‑world limitations, the radar layer introduces:
-
-- Duplicate detections of the same aircraft from different stations  
-- Temporary loss of track (terrain masking, curvature of Earth, clutter, weather, etc.)  
-- Noise, gaps, and inconsistencies in measurements  
-- Varying detection probability depending on geometry and environment  
-
-This creates a realistic, imperfect observation environment — just like real air traffic surveillance systems.
+- Simulates airspace over a configurable geographic area (Europe + CIS by default)
+- Generates scheduled/unscheduled traffic and transient phenomena
+- Emits lifecycle events: `spawned` → `position_updated` → `despawned`
+- Publishes events to JSON/Avro Kafka topics
+- Ingests into ClickHouse for SQL analytics and historical replay
 
 ---
 
-## ✈️ Aircraft Simulation (“Source of Truth”)
+## End-to-end flow
 
-The aircraft world operates as a perfect, noise‑free model of reality. Each aircraft has:
-
-- True position  
-- True velocity  
-- True altitude  
-- Deterministic or scripted movement patterns  
-
-The radar layer observes this world and produces noisy, incomplete data streams.
-
----
-
-## 🧠 Processing & Fusion Objectives
-
-The system is designed to support and test advanced air‑tracking algorithms, including:
-
-- **Interpolation** — filling gaps between radar hits  
-- **Smoothing** — reducing noise and jitter in measurements  
-- **Prediction** — estimating future aircraft positions  
-- **(Near) real‑time tracking** — maintaining stable tracks over time  
-- **Deduplication** — merging multiple radar detections into a single coherent track  
-
-These components together form a complete airspace picture generation pipeline.
+```
+Scenario generation (FlightFactory)
+        ↓
+SimulationEngine (movement + lifecycle)
+        ↓
+TruthEvent stream
+        ↓
+Sink (json | console | kafka | kafka-avro)
+        ↓
+Kafka → truth_raw_ingestor → ClickHouse
+        ↓
+Grafana / airspace_replay / mart views
+```
 
 ---
 
-## 📡 End‑to‑End Flow
+## Quick start
 
-- Truth Model (Aircraft World + Physics)
-                    ↓
-- Radar Simulation Layer (Noise, gaps, duplicates)
-                    ↓
-- Event Stream (continuous radar hits)
-                    ↓
-- Processing Pipeline (fusion, tracking, prediction)
-                    ↓
-- Airspace Picture (clean, deduplicated, real‑time)
+```bash
+# Infrastructure
+docker compose -f infrastructure/kafka/docker-compose.yml up -d
 
+# Ingestor (separate terminal, Avro topic)
+bash scripts/run_ingestor.sh
+
+# Single simulator (Avro)
+python main.py --profile debug --sink kafka-avro
+
+# Generator cluster (Avro, 3 shards, shared run_id)
+bash scripts/run_generator_cluster.sh
+```
+
+See [ROADMAP.md](ROADMAP.md) for the learning path and [PROJECT_MAP.md](PROJECT_MAP.md) for architecture details.
 
 ---
 
-## 🚀 Purpose of the Project
+## Profiles
 
-This project serves as a sandbox for experimenting with:
-
-- Multi‑sensor fusion  
-- Real‑time tracking algorithms  
-- Radar data processing  
-- Airspace visualization  
-- System robustness under imperfect data  
-
-It is ideal for research, prototyping, and educational exploration of air surveillance systems.
+| Profile | Use |
+|---------|-----|
+| `debug` | Small local test |
+| `realtime_demo` | Paced human-observable run |
+| `load` | Throughput benchmark |
+| `stream` | Infinite realtime Kafka stream |
+| `stream_shard` | Smaller world per process — for generator clusters |
